@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <a href="/" class="logo">Japanese Vocab Quiz</a>
+                <ul class="nav-menu">
+                    <li><a href="/quiz/list">Quizzes</a></li>
+                    <li><a href="/quiz/create">Create Quiz</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+    <main>
+        <%- body %>
+    </main>
+    <footer>
+        <p>&copy; 2024 Japanese Vocabulary Quiz. For educational purposes.</p>
+    </footer>
+</body>
+</html>
