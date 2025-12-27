@@ -1,5 +1,6 @@
 use actix_web::{web, HttpResponse, Responder};
 use tokio_postgres::Client;
+use tokio_postgres::types::Json;
 use crate::models::{CreateQuizRequest, Quiz, Question};
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -36,13 +37,12 @@ pub async fn list_quizzes(client: web::Data<Arc<Mutex<Client>>>) -> impl Respond
         let questions: Vec<Question> = questions_rows
             .iter()
             .map(|row| {
-                let options_json: serde_json::Value = row.get(2);
-                let options: Vec<String> = serde_json::from_value(options_json).unwrap_or_default();
+                let options_json: Json<Vec<String>> = row.get(2);
                 
                 Question {
                     id: Some(row.get(0)),
                     text: row.get(1),
-                    options,
+                    options: options_json.0,
                     correct_answer: row.get(3),
                 }
             })
@@ -97,13 +97,12 @@ pub async fn get_quiz(
     let questions: Vec<Question> = questions_rows
         .iter()
         .map(|row| {
-            let options_json: serde_json::Value = row.get(2);
-            let options: Vec<String> = serde_json::from_value(options_json).unwrap_or_default();
+            let options_json: Json<Vec<String>> = row.get(2);
             
             Question {
                 id: Some(row.get(0)),
                 text: row.get(1),
-                options,
+                options: options_json.0,
                 correct_answer: row.get(3),
             }
         })
@@ -146,7 +145,7 @@ pub async fn create_quiz(
     
     // Insert questions
     for question in &quiz_data.questions {
-        let options_json = serde_json::to_value(&question.options).unwrap();
+        let options_json = Json(&question.options);
         
         if let Err(e) = client
             .execute(
