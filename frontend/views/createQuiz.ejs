@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <a href="/" class="logo">🌸 Japanese Vocab Quiz</a>
+                <ul class="nav-menu">
+                    <li><a href="/quiz/list">Quizzes</a></li>
+                    <li><a href="/quiz/create" class="btn-create">Create Quiz</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+    <main>
+        <div class="container">
+            <h1>Create New Quiz</h1>
+            <% if (typeof error !== 'undefined') { %>
+                <div class="error-message"><%= error %></div>
+            <% } %>
+            <form id="createQuizForm" class="create-quiz-form">
+                <div class="form-group">
+                    <label for="title">Quiz Title:</label>
+                    <input type="text" id="title" name="title" required placeholder="e.g., N5 Vocabulary Quiz">
+                </div>
+                
+                <div class="form-group">
+                    <label for="description">Description:</label>
+                    <textarea id="description" name="description" rows="3" placeholder="Brief description of the quiz"></textarea>
+                </div>
+                
+                <div id="questionsContainer">
+                    <h2>Questions</h2>
+                    <div class="question-block" data-question-index="0">
+                        <h3>Question 1</h3>
+                        <div class="form-group">
+                            <label>Question Text:</label>
+                            <input type="text" name="questions[0][text]" required placeholder="What does 'こんにちは' mean?">
+                        </div>
+                        <div class="form-group">
+                            <label>Option A:</label>
+                            <input type="text" name="questions[0][options][0]" required placeholder="Hello">
+                        </div>
+                        <div class="form-group">
+                            <label>Option B:</label>
+                            <input type="text" name="questions[0][options][1]" required placeholder="Goodbye">
+                        </div>
+                        <div class="form-group">
+                            <label>Option C:</label>
+                            <input type="text" name="questions[0][options][2]" required placeholder="Thank you">
+                        </div>
+                        <div class="form-group">
+                            <label>Option D:</label>
+                            <input type="text" name="questions[0][options][3]" required placeholder="Sorry">
+                        </div>
+                        <div class="form-group">
+                            <label>Correct Answer:</label>
+                            <select name="questions[0][correct_answer]" required>
+                                <option value="0">A</option>
+                                <option value="1">B</option>
+                                <option value="2">C</option>
+                                <option value="3">D</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="addQuestion()">Add Question</button>
+                    <button type="submit" class="btn btn-primary">Create Quiz</button>
+                </div>
+            </form>
+        </div>
+    </main>
+    <footer>
+        <p>&copy; 2024 Japanese Vocabulary Quiz. For educational purposes.</p>
+    </footer>
+    <script src="/js/createQuiz.js"></script>
+</body>
+</html>

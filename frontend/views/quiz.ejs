@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <a href="/" class="logo">🌸 Japanese Vocab Quiz</a>
+                <ul class="nav-menu">
+                    <li><a href="/quiz/list">Quizzes</a></li>
+                    <li><a href="/quiz/create" class="btn-create">Create Quiz</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+    <main>
+        <div class="container quiz-container">
+            <div class="quiz-header">
+                <h1><%= quiz.title %></h1>
+                <p class="quiz-description"><%= quiz.description || '' %></p>
+                <div class="quiz-progress">
+                    <span id="currentQuestion">1</span> / <span id="totalQuestions"><%= quiz.questions.length %></span>
+                </div>
+            </div>
+            
+            <form id="quizForm" action="/quiz/<%= quiz.id %>/submit" method="POST">
+                <% quiz.questions.forEach((question, index) => { %>
+                    <div class="question-card <%= index === 0 ? 'active' : '' %>" data-question="<%= index %>">
+                        <div class="question-number">Question <%= index + 1 %></div>
+                        <h2 class="question-text"><%= question.text %></h2>
+                        <div class="options-container">
+                            <% question.options.forEach((option, optIndex) => { %>
+                                <label class="option-card">
+                                    <input type="radio" name="answers[<%= index %>]" value="<%= optIndex %>" required>
+                                    <span class="option-label"><%= String.fromCharCode(65 + optIndex) %></span>
+                                    <span class="option-text"><%= option %></span>
+                                </label>
+                            <% }); %>
+                        </div>
+                        <div class="question-navigation">
+                            <% if (index > 0) { %>
+                                <button type="button" class="btn btn-secondary" onclick="previousQuestion()">Previous</button>
+                            <% } %>
+                            <% if (index < quiz.questions.length - 1) { %>
+                                <button type="button" class="btn btn-primary" onclick="nextQuestion()">Next</button>
+                            <% } else { %>
+                                <button type="submit" class="btn btn-success">Submit Quiz</button>
+                            <% } %>
+                        </div>
+                    </div>
+                <% }); %>
+            </form>
+        </div>
+    </main>
+    <footer>
+        <p>&copy; 2024 Japanese Vocabulary Quiz. For educational purposes.</p>
+    </footer>
+    <script src="/js/quiz.js"></script>
+</body>
+</html>

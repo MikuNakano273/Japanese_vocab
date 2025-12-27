@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <a href="/" class="logo">🌸 Japanese Vocab Quiz</a>
+                <ul class="nav-menu">
+                    <li><a href="/quiz/list">Quizzes</a></li>
+                    <li><a href="/quiz/create" class="btn-create">Create Quiz</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+    <main>
+        <div class="container result-container">
+            <div class="result-header">
+                <h1>Quiz Complete!</h1>
+                <div class="score-display">
+                    <div class="score-circle">
+                        <span class="score-number"><%= percentage %>%</span>
+                    </div>
+                    <p class="score-text">You scored <%= score %> out of <%= total %></p>
+                </div>
+            </div>
+            
+            <div class="quiz-title">
+                <h2><%= quiz.title %></h2>
+            </div>
+            
+            <div class="answers-review">
+                <h3>Review Your Answers</h3>
+                <% quiz.questions.forEach((question, index) => { %>
+                    <div class="review-card <%= parseInt(userAnswers[index]) === question.correct_answer ? 'correct' : 'incorrect' %>">
+                        <div class="review-question">
+                            <span class="review-number">Question <%= index + 1 %></span>
+                            <h4><%= question.text %></h4>
+                        </div>
+                        <div class="review-options">
+                            <% question.options.forEach((option, optIndex) => { %>
+                                <div class="review-option 
+                                    <%= optIndex === question.correct_answer ? 'correct-answer' : '' %>
+                                    <%= parseInt(userAnswers[index]) === optIndex && optIndex !== question.correct_answer ? 'wrong-answer' : '' %>
+                                    <%= parseInt(userAnswers[index]) === optIndex ? 'selected' : '' %>">
+                                    <span class="option-label"><%= String.fromCharCode(65 + optIndex) %></span>
+                                    <span class="option-text"><%= option %></span>
+                                    <% if (optIndex === question.correct_answer) { %>
+                                        <span class="check-mark">✓</span>
+                                    <% } %>
+                                    <% if (parseInt(userAnswers[index]) === optIndex && optIndex !== question.correct_answer) { %>
+                                        <span class="x-mark">✗</span>
+                                    <% } %>
+                                </div>
+                            <% }); %>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+            
+            <div class="result-actions">
+                <a href="/quiz/<%= quiz.id %>" class="btn btn-secondary">Retake Quiz</a>
+                <a href="/quiz/list" class="btn btn-primary">Back to Quizzes</a>
+            </div>
+        </div>
+    </main>
+    <footer>
+        <p>&copy; 2024 Japanese Vocabulary Quiz. For educational purposes.</p>
+    </footer>
+</body>
+</html>
