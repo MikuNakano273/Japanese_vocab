@@ -34,9 +34,28 @@ Before you begin, ensure you have the following installed:
 ```bash
 git clone https://github.com/MikuNakano273/Japanese_vocab.git
 cd Japanese_vocab
+
+# Make setup scripts executable
+chmod +x setup.sh start.sh
 ```
 
-### 2. Database Setup
+### 2. Quick Setup (Recommended)
+
+Use the automated setup script:
+
+```bash
+# Run setup script (installs dependencies and builds backend)
+./setup.sh
+```
+
+Then initialize the database:
+
+```bash
+# Create database and tables
+psql -U postgres -f database/init.sql
+```
+
+### 3. Manual Database Setup
 
 Start PostgreSQL and create the database:
 
@@ -61,12 +80,25 @@ CREATE DATABASE japanese_vocab;
 psql -U postgres -d japanese_vocab -f database/init.sql
 ```
 
-### 3. Backend Setup (Rust)
+### 4. Start the Application
+
+#### Quick Start (Both servers at once)
+
+```bash
+# Start both frontend and backend servers
+./start.sh
+```
+
+Access the application at `http://localhost:3000`
+
+#### Manual Start (Separate terminals)
+
+**Terminal 1 - Backend (Rust):**
 
 ```bash
 cd backend
 
-# Copy environment file
+# Copy environment file (if not done already)
 cp .env.example .env
 
 # Edit .env if needed to match your PostgreSQL credentials
@@ -79,9 +111,7 @@ cargo run
 
 The backend server will start at `http://localhost:8080`
 
-### 4. Frontend Setup (Node.js)
-
-Open a new terminal:
+**Terminal 2 - Frontend (Node.js):**
 
 ```bash
 cd frontend

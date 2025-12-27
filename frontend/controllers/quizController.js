@@ -69,7 +69,7 @@ exports.submitQuiz = async (req, res) => {
         let totalQuestions = quiz.questions.length;
         
         quiz.questions.forEach((question, index) => {
-            const userAnswer = userAnswers[index];
+            const userAnswer = parseInt(userAnswers[index]);
             if (userAnswer === question.correct_answer) {
                 score++;
             }

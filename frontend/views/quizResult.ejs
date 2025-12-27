@@ -37,7 +37,7 @@
             <div class="answers-review">
                 <h3>Review Your Answers</h3>
                 <% quiz.questions.forEach((question, index) => { %>
-                    <div class="review-card <%= userAnswers[index] == question.correct_answer ? 'correct' : 'incorrect' %>">
+                    <div class="review-card <%= parseInt(userAnswers[index]) === question.correct_answer ? 'correct' : 'incorrect' %>">
                         <div class="review-question">
                             <span class="review-number">Question <%= index + 1 %></span>
                             <h4><%= question.text %></h4>
@@ -45,15 +45,15 @@
                         <div class="review-options">
                             <% question.options.forEach((option, optIndex) => { %>
                                 <div class="review-option 
-                                    <%= optIndex == question.correct_answer ? 'correct-answer' : '' %>
-                                    <%= userAnswers[index] == optIndex && optIndex != question.correct_answer ? 'wrong-answer' : '' %>
-                                    <%= userAnswers[index] == optIndex ? 'selected' : '' %>">
+                                    <%= optIndex === question.correct_answer ? 'correct-answer' : '' %>
+                                    <%= parseInt(userAnswers[index]) === optIndex && optIndex !== question.correct_answer ? 'wrong-answer' : '' %>
+                                    <%= parseInt(userAnswers[index]) === optIndex ? 'selected' : '' %>">
                                     <span class="option-label"><%= String.fromCharCode(65 + optIndex) %></span>
                                     <span class="option-text"><%= option %></span>
-                                    <% if (optIndex == question.correct_answer) { %>
+                                    <% if (optIndex === question.correct_answer) { %>
                                         <span class="check-mark">✓</span>
                                     <% } %>
-                                    <% if (userAnswers[index] == optIndex && optIndex != question.correct_answer) { %>
+                                    <% if (parseInt(userAnswers[index]) === optIndex && optIndex !== question.correct_answer) { %>
                                         <span class="x-mark">✗</span>
                                     <% } %>
                                 </div>
