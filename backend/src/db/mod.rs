@@ -1,50 +1,134 @@
-use tokio_postgres::{Client, Error, NoTls};
-use std::env;
+use sqlx::sqlite::SqlitePool;
 
-pub async fn connect() -> Result<Client, Error> {
-    let database_url = env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "host=localhost user=postgres password=postgres dbname=japanese_vocab".to_string());
-    
-    let (client, connection) = tokio_postgres::connect(&database_url, NoTls).await?;
-    
-    tokio::spawn(async move {
-        if let Err(e) = connection.await {
-            eprintln!("Database connection error: {}", e);
-        }
-    });
-    
-    Ok(client)
-}
+// Note: the previous `connect()` helper was removed because the application
+// uses `SqlitePool::connect` directly in `main.rs`. If a centralized helper
+// is needed later, it can be reintroduced here.
 
-pub async fn init_db(client: &Client) -> Result<(), Error> {
-    // Create quizzes table
-    client
-        .execute(
-            "CREATE TABLE IF NOT EXISTS quizzes (
-                id SERIAL PRIMARY KEY,
-                title VARCHAR(255) NOT NULL,
-                description TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )",
-            &[],
-        )
+/// Initialize required tables for the application in SQLite.
+///
+/// Notes about type differences for SQLite:
+/// - `INTEGER PRIMARY KEY AUTOINCREMENT` is used for id
+/// - `TEXT` is used for text fields and timestamps (using `datetime('now')`)
+/// - `options` is stored as JSON text in a `TEXT` column
+pub async fn init_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    // Enable foreign key enforcement in SQLite
+    // (Must be set per-connection for older SQLite versions; this is safe to run repeatedly.)
+    sqlx::query("PRAGMA foreign_keys = ON;")
+        .execute(pool)
         .await?;
-    
-    // Create questions table
-    client
-        .execute(
-            "CREATE TABLE IF NOT EXISTS questions (
-                id SERIAL PRIMARY KEY,
-                quiz_id INTEGER NOT NULL REFERENCES quizzes(id) ON DELETE CASCADE,
-                text TEXT NOT NULL,
-                options JSONB NOT NULL,
-                correct_answer INTEGER NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )",
-            &[],
-        )
+
+    // Create entries table (source data)
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            list_index INTEGER,
+            kanji TEXT,
+            kana TEXT,
+            meaning TEXT
+        );
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    // Create quizzes table (optional container for grouping questions)
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS quizzes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            description TEXT,
+            created_at TEXT DEFAULT (datetime('now'))
+        );
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    // Create n_level mapping table (1 -> n5, 2 -> n4, ..., 5 -> n1)
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS n_level (
+            id INTEGER PRIMARY KEY,
+            level TEXT NOT NULL
+        );
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    // Populate canonical n_level rows (id 1..5)
+    // Use INSERT OR IGNORE so this is idempotent.
+    sqlx::query("INSERT OR IGNORE INTO n_level (id, level) VALUES (?, ?)")
+        .bind(1i64)
+        .bind("n5")
+        .execute(pool)
         .await?;
-    
-    println!("Database tables initialized successfully");
+    sqlx::query("INSERT OR IGNORE INTO n_level (id, level) VALUES (?, ?)")
+        .bind(2i64)
+        .bind("n4")
+        .execute(pool)
+        .await?;
+    sqlx::query("INSERT OR IGNORE INTO n_level (id, level) VALUES (?, ?)")
+        .bind(3i64)
+        .bind("n3")
+        .execute(pool)
+        .await?;
+    sqlx::query("INSERT OR IGNORE INTO n_level (id, level) VALUES (?, ?)")
+        .bind(4i64)
+        .bind("n2")
+        .execute(pool)
+        .await?;
+    sqlx::query("INSERT OR IGNORE INTO n_level (id, level) VALUES (?, ?)")
+        .bind(5i64)
+        .bind("n1")
+        .execute(pool)
+        .await?;
+
+    // Create questions table (keeps original columns and extends with level & chapter)
+    // - entry_id references entries.id
+    // - quiz_id is optional (can be NULL) and references quizzes.id
+    // - options stored as JSON text in TEXT column
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS questions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            entry_id INTEGER REFERENCES entries(id) ON DELETE CASCADE,
+            quiz_id INTEGER REFERENCES quizzes(id) ON DELETE SET NULL,
+            q_type TEXT,
+            prompt TEXT,
+            correct_answer TEXT,
+            options TEXT,
+            correct_index INTEGER,
+            level INTEGER REFERENCES n_level(id),
+            chapter INTEGER,
+            created_at TEXT DEFAULT (datetime('now'))
+        );
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    // Create tests table to store generated tests (questions JSON)
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS tests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT,
+            questions TEXT,
+            created_at TEXT DEFAULT (datetime('now'))
+        );
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    // Helpful index for lookups by entry_id
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_entry_id ON questions(entry_id);")
+        .execute(pool)
+        .await?;
+
+    println!("Database tables initialized successfully (SQLite): entries, quizzes, n_level, questions, tests");
     Ok(())
 }

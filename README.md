@@ -1,12 +1,12 @@
 # Japanese Vocabulary Quiz Application
 
-A full-stack quiz application for learning Japanese vocabulary, built with Node.js frontend, Rust backend, and PostgreSQL database. Designed for localhost single-user deployment with a Quizzi-style interface.
+A full-stack quiz application for learning Japanese vocabulary, built with Node.js frontend, Rust backend, and SQLite (file-based) database. Designed for localhost single-user deployment with a Quizzi-style interface. The application uses a local SQLite file `mimikara_n3_question.db` by default.
 
 ## 🏗️ Architecture
 
 - **Frontend**: Node.js with Express (MVC pattern)
 - **Backend**: Rust with Actix-web
-- **Database**: PostgreSQL
+- **Database**: SQLite (file: `mimikara_n3_question.db`)
 - **Design**: Quizzi-style quiz interface
 
 ## ✨ Features
@@ -16,7 +16,7 @@ A full-stack quiz application for learning Japanese vocabulary, built with Node.
 - 📊 Real-time scoring (statistics only, not saved to database)
 - 🎨 Modern, responsive design
 - 🔄 MVC architecture for clean code organization
-- 🚀 Fast Rust backend with PostgreSQL
+- 🚀 Fast Rust backend with SQLite (file-based database)
 
 ## 📋 Prerequisites
 
@@ -24,7 +24,7 @@ Before you begin, ensure you have the following installed:
 
 - **Node.js** (v16 or higher)
 - **Rust** (latest stable version)
-- **PostgreSQL** (v12 or higher)
+- **SQLite** (file-based database; no separate server required)
 - **Cargo** (comes with Rust)
 
 ## 🚀 Installation & Setup
@@ -48,36 +48,43 @@ Use the automated setup script:
 ./setup.sh
 ```
 
-Then initialize the database:
+Database initialization is automatic on first backend run. The backend will create the SQLite file `mimikara_n3_question.db` (if it doesn't exist) and initialize required tables.
+
+If you prefer to inspect the database manually, you can use the sqlite3 CLI:
 
 ```bash
-# Create database and tables
-psql -U postgres -f database/init.sql
+# Inspect the SQLite database file (after running the backend at least once)
+sqlite3 mimikara_n3_question.db
+# In sqlite3 shell:
+# .tables
+# SELECT * FROM quizzes;
 ```
 
 ### 3. Manual Database Setup
 
-Start PostgreSQL and create the database:
+No separate database server is required. SQLite is file-based and the backend will create and initialize the database file automatically when started.
+
+If you want to manually inspect or run SQL against the database file, use the `sqlite3` CLI:
 
 ```bash
-# Start PostgreSQL service (depends on your OS)
-# For Ubuntu/Debian:
-sudo service postgresql start
+# Open the database file
+sqlite3 mimikara_n3_question.db
 
-# For macOS (using Homebrew):
-brew services start postgresql
-
-# Create database and tables
-psql -U postgres -f database/init.sql
+# Examples inside sqlite3:
+.tables
+SELECT * FROM quizzes;
+SELECT * FROM questions;
 ```
 
 Or manually:
 
 ```bash
-psql -U postgres
-CREATE DATABASE japanese_vocab;
-\q
-psql -U postgres -d japanese_vocab -f database/init.sql
+# No separate DB server required — the backend will create and initialize the SQLite file `mimikara_n3_question.db`.
+# If you want to inspect the database manually, use the sqlite3 CLI after running the backend at least once:
+sqlite3 mimikara_n3_question.db
+# In the sqlite3 shell:
+# .tables
+# SELECT * FROM quizzes;
 ```
 
 ### 4. Start the Application
@@ -101,12 +108,17 @@ cd backend
 # Copy environment file (if not done already)
 cp .env.example .env
 
-# Edit .env if needed to match your PostgreSQL credentials
-# DATABASE_URL=host=localhost user=postgres password=postgres dbname=japanese_vocab
+# Edit .env if needed to change the SQLite database location
+# Example:
+# DATABASE_URL=sqlite://mimikara_n3_question.db
+# PORT=8081
 
 # Build and run
 cargo build --release
 cargo run
+
+# The backend will start and (if needed) create `mimikara_n3_question.db` and initialize tables.
+# Default backend URL: http://localhost:8081
 ```
 
 The backend server will start at `http://localhost:8080`
@@ -176,7 +188,7 @@ Japanese_vocab/
 │   │   └── main.rs       # Main application file
 │   └── Cargo.toml        # Rust dependencies
 └── database/             # Database scripts
-    └── init.sql          # Database initialization
+    └── (no separate SQL init file — database is initialized automatically by the backend into `mimikara_n3_question.db`)
 ```
 
 ## 🔧 Configuration
@@ -184,15 +196,15 @@ Japanese_vocab/
 ### Frontend Environment Variables (.env)
 
 ```env
-BACKEND_URL=http://localhost:8080
+BACKEND_URL=http://localhost:8081
 PORT=3000
 ```
 
 ### Backend Environment Variables (.env)
 
 ```env
-DATABASE_URL=host=localhost user=postgres password=postgres dbname=japanese_vocab
-PORT=8080
+DATABASE_URL=sqlite://mimikara_n3_question.db
+PORT=8081
 ```
 
 ## 🛠️ Development
@@ -213,10 +225,14 @@ cargo run
 
 ### Database Management
 
-View tables:
+View tables (using sqlite3 after the backend has initialized the DB file):
 ```bash
-psql -U postgres -d japanese_vocab
-\dt
+sqlite3 mimikara_n3_question.db
+# then in sqlite3:
+.tables
+# or run a query:
+SELECT * FROM quizzes;
+SELECT * FROM questions;
 ```
 
 Query data:

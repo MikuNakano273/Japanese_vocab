@@ -8,7 +8,7 @@ This is a complete full-stack web application for creating and taking Japanese v
 ### Technology Stack
 - **Frontend**: Node.js + Express.js (MVC pattern)
 - **Backend**: Rust + Actix-web
-- **Database**: PostgreSQL
+- **Database**: SQLite (file-based, default: `mimikara_n3_question.db`)
 - **Template Engine**: EJS
 - **Styling**: Custom CSS (Quizzi-style design)
 
@@ -148,7 +148,7 @@ backend/src/
 ### Prerequisites
 - Node.js 16+
 - Rust (latest stable)
-- PostgreSQL 12+
+- SQLite (file-based; no separate server required)
 
 ### Quick Start
 ```bash
@@ -156,7 +156,20 @@ backend/src/
 ./setup.sh
 
 # 2. Initialize database
-psql -U postgres -f database/init.sql
+### Quick Start
+
+# 2. Initialize / inspect database
+The application uses a local SQLite file. The backend will automatically create and initialize `mimikara_n3_question.db` on first run.
+
+If you want to inspect the database manually after the backend has initialized it, use the `sqlite3` CLI:
+
+```bash
+# Inspect the SQLite database file
+sqlite3 mimikara_n3_question.db
+# In the sqlite3 shell:
+# .tables
+# SELECT * FROM quizzes;
+```
 
 # 3. Start application (starts both servers)
 ./start.sh
@@ -196,9 +209,8 @@ Japanese_vocab/
 │       └── main.rs      # Server entry point
 │
 ├── database/            # Database scripts
-│   └── init.sql        # Schema + sample data
+│   └── (no separate SQL init file — database is initialized automatically by the backend into `mimikara_n3_question.db`)
 │
-├── docker-compose.yml  # PostgreSQL container
 ├── setup.sh           # Setup script
 └── start.sh           # Start script
 ```
@@ -214,15 +226,15 @@ Japanese_vocab/
 
 ### Backend
 - Actix-web (high-performance async framework)
-- PostgreSQL with tokio-postgres
-- JSON support via postgres-types
+- SQLite using `sqlx` (local file-based DB)
+- JSON stored as TEXT in SQLite (deserialize/serialize as needed)
 - CORS enabled for development
 - Async/await pattern
 
 ### Database
-- PostgreSQL with JSONB for flexible option storage
-- Foreign key constraints
-- Automatic timestamps
+- SQLite (JSON stored as TEXT where needed for flexible option storage)
+- Foreign key constraints supported (ENFORCED when PRAGMA foreign_keys=ON)
+- Automatic timestamps via `datetime('now')` defaults
 - Sample data included
 
 ## Security Features
@@ -261,8 +273,8 @@ Possible additions:
 ## Troubleshooting
 
 ### Backend won't start
-- Check PostgreSQL is running
-- Verify DATABASE_URL in backend/.env
+- Verify the Rust toolchain is installed and up-to-date (run `rustup show` / `rustc --version`)
+- Check `DATABASE_URL` in `backend/.env` points to a valid SQLite file (e.g. `sqlite://mimikara_n3_question.db`) and that the backend process can create/open that file
 - Run: `cargo clean && cargo build`
 
 ### Frontend won't start
@@ -271,9 +283,9 @@ Possible additions:
 - Verify BACKEND_URL in frontend/.env
 
 ### Database connection fails
-- Ensure PostgreSQL service is running
-- Check credentials match .env file
-- Run init.sql to create database
+- Ensure the backend can create/open the SQLite DB file `mimikara_n3_question.db` (check file permissions and path)
+- Check `DATABASE_URL` in `backend/.env` points to a valid SQLite URL (for example: `sqlite://mimikara_n3_question.db`)
+- There is no `init.sql` for SQLite in this project — the backend initializes the required tables automatically on first run
 
 ## License
 Educational purposes - Free to use and modify

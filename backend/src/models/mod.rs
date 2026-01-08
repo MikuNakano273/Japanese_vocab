@@ -29,3 +29,7 @@ pub struct QuestionInput {
     pub options: Vec<String>,
     pub correct_answer: i32,
 }
+
+// Test-related types and payloads removed because they are not used by current code.
+// If you need to reintroduce test generation payloads or models later, re-add
+// appropriate structs here.

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    /* Minimal styles to ensure immediate feedback colors if stylesheet doesn't define them */
+    .question-card { display: none; padding: 1rem; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 1rem; background: #fff; }
+    .question-card.active { display: block; }
+    .options-container { display: flex; flex-direction: column; gap: .5rem; margin-top: .75rem; }
+    .option-card { display:flex; align-items:center; gap:.75rem; padding:.5rem; border-radius:6px; cursor:pointer; border:1px solid transparent; transition: background 150ms, border-color 150ms, color 150ms; }
+    .option-card.disabled { opacity: .7; cursor: default; }
+    .option-card.correct { background: #d1fae5; border-color:#10b981; color: #065f46; }
+    .option-card.incorrect { background: #fee2e2; border-color:#ef4444; color: #7f1d1d; }
+    .option-label { font-weight:700; width:28px; height:28px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:#f3f4f6; }
+    .quiz-header { display:flex; justify-content:space-between; align-items:center; gap:1rem; margin-bottom:1rem; }
+    .quiz-progress { font-weight:700; }
+    .final-results { margin-top:1rem; padding:1rem; border-radius:8px; background:#f8fafc; }
+    .btn { padding:.5rem .75rem; border-radius:6px; border: none; cursor:pointer; }
+    .btn-primary { background:#6366f1; color:#fff; }
+    .btn-secondary { background:#e5e7eb; }
+    .btn-success { background:#10b981; color:#fff; }
+  </style>
+</head>
+<body>
+  <header>
+    <nav class="navbar">
+      <div class="nav-container">
+        <a href="/" class="logo">🌸 Japanese Vocab Test</a>
+        <ul class="nav-menu">
+          <li><a href="/quiz/list">Quizzes</a></li>
+          <li><a href="/test/create" class="btn-create">Create Test</a></li>
+        </ul>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div class="quiz-header">
+      <div>
+        <h1><%= test.title || 'Test' %></h1>
+        <p class="quiz-description"><%= test.description || '' %></p>
+      </div>
+      <div class="quiz-progress">
+        <span id="currentQuestion">1</span> / <span id="totalQuestions"><%= (test.questions && test.questions.length) || 0 %></span>
+      </div>
+    </div>
+
+    <% if (!test.questions || test.questions.length === 0) { %>
+      <div class="error-message">No questions available for this test.</div>
+    <% } else { %>
+
+      <div id="testArea">
+        <form id="testForm" onsubmit="return false;">
+          <% test.questions.forEach(function(question, index) { %>
+            <div class="question-card <%= index === 0 ? 'active' : '' %>" data-question="<%= index %>" data-qid="<%= question.id || '' %>">
+              <div class="question-number">Question <%= index + 1 %></div>
+              <h2 class="question-text"><%= question.text %></h2>
+
+              <div class="options-container">
+                <% (question.options || []).forEach(function(opt, optIndex) { %>
+                  <label class="option-card" data-opt-index="<%= optIndex %>">
+                    <input type="radio" name="answer-<%= index %>" value="<%= optIndex %>" style="display:none;">
+                    <span class="option-label"><%= String.fromCharCode(65 + optIndex) %></span>
+                    <span class="option-text"><%= opt %></span>
+                  </label>
+                <% }); %>
+              </div>
+
+              <div style="margin-top:.75rem; display:flex; gap:.5rem; align-items:center;">
+                <% if (index > 0) { %>
+                  <button type="button" class="btn btn-secondary" onclick="previousQuestion()">Previous</button>
+                <% } %>
+                <% if (index < test.questions.length - 1) { %>
+                  <button type="button" class="btn btn-primary" onclick="nextQuestion()">Next</button>
+                <% } else { %>
+                  <button type="button" class="btn btn-success" id="finishBtn">Finish</button>
+                <% } %>
+                <div style="margin-left:auto; font-size:.95rem;">
+                  <span id="correctCount">0</span> correct • <span id="wrongCount">0</span> wrong
+                </div>
+              </div>
+            </div>
+          <% }); %>
+        </form>
+      </div>
+
+      <div id="finalResults" class="final-results" style="display:none;">
+        <h3>Test Complete</h3>
+        <p>You answered <span id="finalCorrect"></span> / <span id="finalTotal"></span> questions correctly.</p>
+        <p>Wrong answers: <span id="finalWrong"></span></p>
+        <div id="reviewList"></div>
+        <div style="margin-top:1rem;">
+          <a id="retakeLink" href="#" class="btn btn-primary">Retake</a>
+          <a id="homeLink" href="/" class="btn btn-secondary" style="margin-left:1rem;">Home</a>
+        </div>
+      </div>
+
+    <% } %>
+  </main>
+
+  <footer>
+    <p>&copy; 2024 Japanese Vocabulary Quiz. For educational purposes.</p>
+  </footer>
+
+  <script>
+    (function () {
+      const questions = <%- JSON.stringify(test.questions || []) %>;
+      const total = questions.length;
+      let current = 0;
+      let correctCount = 0;
+      let wrongCount = 0;
+      const answered = Array(total).fill(false);
+      const userAnswers = Array(total).fill(null);
+
+      const questionCards = Array.from(document.querySelectorAll('.question-card'));
+      const currentEl = document.getElementById('currentQuestion');
+      const totalEl = document.getElementById('totalQuestions');
+      const correctEl = document.getElementById('correctCount');
+      const wrongEl = document.getElementById('wrongCount');
+      const finishBtn = document.getElementById('finishBtn');
+
+      function showQuestion(i) {
+        if (i < 0 || i >= total) return;
+        questionCards.forEach((c, idx) => {
+          c.classList.toggle('active', idx === i);
+        });
+        current = i;
+        currentEl.textContent = current + 1;
+      }
+
+      function updateCounts() {
+        correctEl.textContent = correctCount;
+        wrongEl.textContent = wrongCount;
+      }
+
+      function markOption(cardEl, optIndex, state) {
+        const optEl = cardEl.querySelector('.option-card[data-opt-index="' + optIndex + '"]');
+        if (!optEl) return;
+        optEl.classList.remove('correct', 'incorrect');
+        if (state === 'correct') optEl.classList.add('correct');
+        if (state === 'incorrect') optEl.classList.add('incorrect');
+      }
+
+      function disableOptions(cardEl) {
+        const opts = cardEl.querySelectorAll('.option-card');
+        opts.forEach(o => {
+          o.classList.add('disabled');
+        });
+      }
+
+      function handleSelect(cardEl, qIndex, selectedIdx) {
+        if (answered[qIndex]) return; // ignore repeat selection
+        const question = questions[qIndex];
+        const correctIdx = (typeof question.correct_answer !== 'undefined' && question.correct_answer !== null)
+          ? Number(question.correct_answer)
+          : (typeof question.correct_index !== 'undefined' ? Number(question.correct_index) : null);
+
+        answered[qIndex] = true;
+        userAnswers[qIndex] = selectedIdx;
+
+        if (selectedIdx === correctIdx) {
+          // correct
+          markOption(cardEl, selectedIdx, 'correct');
+          correctCount++;
+        } else {
+          // incorrect: mark selected incorrect and mark correct
+          markOption(cardEl, selectedIdx, 'incorrect');
+          if (correctIdx !== null) markOption(cardEl, correctIdx, 'correct');
+          wrongCount++;
+        }
+
+        // disable all options for this question and show small feedback
+        disableOptions(cardEl);
+
+        updateCounts();
+      }
+
+      // Attach event listeners to option cards
+      questionCards.forEach((card, qIndex) => {
+        const optionCards = card.querySelectorAll('.option-card');
+        optionCards.forEach(opt => {
+          opt.addEventListener('click', function (ev) {
+            // if disabled, ignore
+            if (this.classList.contains('disabled')) return;
+            const optIndex = Number(this.getAttribute('data-opt-index'));
+            // visually select the radio (hidden)
+            const radio = card.querySelector('input[type="radio"][value="' + optIndex + '"]');
+            if (radio) radio.checked = true;
+            handleSelect(card, qIndex, optIndex);
+          });
+        });
+      });
+
+      // Navigation
+      window.nextQuestion = function () {
+        if (current < total - 1) {
+          showQuestion(current + 1);
+        }
+      };
+      window.previousQuestion = function () {
+        if (current > 0) {
+          showQuestion(current - 1);
+        }
+      };
+
+      // Keyboard navigation: arrows to move, number keys to pick option
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowRight') nextQuestion();
+        if (e.key === 'ArrowLeft') previousQuestion();
+        // number 1..4 select option for current question
+        if (/^[1-9]$/.test(e.key)) {
+          const n = Number(e.key);
+          const optIdx = n - 1;
+          const card = questionCards[current];
+          const opt = card && card.querySelector('.option-card[data-opt-index="' + optIdx + '"]');
+          if (opt && !opt.classList.contains('disabled')) opt.click();
+        }
+      });
+
+      // Finish action
+      function finishTest() {
+        // Show final results
+        document.getElementById('finalResults').style.display = 'block';
+        document.getElementById('testArea').style.display = 'none';
+        document.getElementById('finalCorrect').textContent = correctCount;
+        document.getElementById('finalTotal').textContent = total;
+        document.getElementById('finalWrong').textContent = wrongCount;
+
+        // Build a quick review list of incorrect items
+        const reviewEl = document.getElementById('reviewList');
+        reviewEl.innerHTML = '';
+        for (let i = 0; i < total; i++) {
+          if (answered[i] && userAnswers[i] !== (questions[i].correct_answer ?? questions[i].correct_index)) continue;
+          // either unanswered or wrong
+          const q = questions[i];
+          const user = userAnswers[i];
+          const correctIdx = q.correct_answer ?? q.correct_index;
+          const div = document.createElement('div');
+          div.style.padding = '.5rem';
+          div.style.borderBottom = '1px solid #eef2ff';
+          div.innerHTML = `<strong>Q${i+1}:</strong> ${escapeHtml(q.text)}<br>
+            Your answer: ${user === null ? '<em>no answer</em>' : escapeHtml((q.options && q.options[user]) || '')}<br>
+            Correct: ${escapeHtml((q.options && q.options[correctIdx]) || '')}`;
+          reviewEl.appendChild(div);
+        }
+
+        // retake link resets state
+        document.getElementById('retakeLink').addEventListener('click', function (ev) {
+          ev.preventDefault();
+          window.location.reload();
+        });
+      }
+
+      if (finishBtn) {
+        finishBtn.addEventListener('click', finishTest);
+      }
+
+      function escapeHtml(s) {
+        if (!s) return '';
+        return String(s).replace(/[&<>"']/g, function (m) {
+          return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m];
+        });
+      }
+
+      // initialize counts
+      updateCounts();
+      totalEl.textContent = total;
+    })();
+  </script>
+</body>
+</html>

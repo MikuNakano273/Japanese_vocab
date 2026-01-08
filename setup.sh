@@ -6,14 +6,13 @@ echo "🌸 Japanese Vocab Quiz - Quick Start"
 echo "===================================="
 echo ""
 
-# Check if PostgreSQL is running
-if ! command -v psql &> /dev/null; then
-    echo "❌ PostgreSQL is not installed or not in PATH"
-    echo "Please install PostgreSQL first."
-    exit 1
+# Using SQLite (file-based) — no separate DB server required
+# Check for sqlite3 CLI for convenience (optional; backend will create DB file even if sqlite3 isn't installed)
+if ! command -v sqlite3 &> /dev/null; then
+    echo "⚠️ sqlite3 CLI not found — that's okay; the backend will create the database file automatically. Install sqlite3 if you want CLI access."
+else
+    echo "✅ sqlite3 CLI found"
 fi
-
-echo "✅ PostgreSQL found"
 
 # Check if Node.js is installed
 if ! command -v node &> /dev/null; then
@@ -69,9 +68,8 @@ echo ""
 echo "✅ Setup complete!"
 echo ""
 echo "To start the application:"
-echo "1. Start PostgreSQL and run: psql -U postgres -f database/init.sql"
-echo "2. Start backend: cd backend && cargo run"
-echo "3. Start frontend (in new terminal): cd frontend && npm start"
-echo "4. Open browser: http://localhost:3000"
+echo "1. Start backend (it will create/init the SQLite DB file `mimikara_n3_question.db` if needed): cd backend && cargo run"
+echo "2. Start frontend (in new terminal): cd frontend && npm start"
+echo "3. Open browser: http://localhost:3000"
 echo ""
 echo "Happy learning! 🌸"
