@@ -48,46 +48,42 @@ Use the automated setup script:
 ./setup.sh
 ```
 
-Database initialization is automatic on first backend run. The backend will create the SQLite file `mimikara_n3_question.db` (if it doesn't exist) and initialize required tables.
+### 3. Database Initialization
 
-If you prefer to inspect the database manually, you can use the sqlite3 CLI:
+The application uses a SQLite database (`mimikara_n3_questions.db`) that contains Japanese vocabulary questions. To initialize the database:
 
 ```bash
-# Inspect the SQLite database file (after running the backend at least once)
-sqlite3 mimikara_n3_question.db
-# In sqlite3 shell:
-# .tables
-# SELECT * FROM quizzes;
+# Initialize database from the SQL file
+./init_database.sh
 ```
 
-### 3. Manual Database Setup
+This script will:
+- Create the database file at `backend/data/mimikara_n3_questions.db`
+- Populate it with entries and questions from `mimikara_n3_questions.db.sql`
+- Skip initialization if the database already exists and has data
 
-No separate database server is required. SQLite is file-based and the backend will create and initialize the database file automatically when started.
+The database includes:
+- **1760 vocabulary entries** (kanji, kana, meaning)
+- **10232 quiz questions** in various formats (kanji→kana, kana→meaning, etc.)
+
+**Note:** The backend will automatically add required schema columns (quiz_id, level, chapter) on first run if they don't exist.
+
+### 4. Manual Database Inspection
 
 If you want to manually inspect or run SQL against the database file, use the `sqlite3` CLI:
 
 ```bash
 # Open the database file
-sqlite3 mimikara_n3_question.db
+sqlite3 backend/data/mimikara_n3_questions.db
 
 # Examples inside sqlite3:
 .tables
-SELECT * FROM quizzes;
-SELECT * FROM questions;
+SELECT COUNT(*) FROM entries;
+SELECT COUNT(*) FROM questions;
+SELECT * FROM questions LIMIT 5;
 ```
 
-Or manually:
-
-```bash
-# No separate DB server required — the backend will create and initialize the SQLite file `mimikara_n3_question.db`.
-# If you want to inspect the database manually, use the sqlite3 CLI after running the backend at least once:
-sqlite3 mimikara_n3_question.db
-# In the sqlite3 shell:
-# .tables
-# SELECT * FROM quizzes;
-```
-
-### 4. Start the Application
+### 5. Start the Application
 
 #### Quick Start (Both servers at once)
 
@@ -149,7 +145,17 @@ The frontend server will start at `http://localhost:3000`
    - The home page displays all available quizzes
    - Sample quizzes are loaded automatically from the database
 
-3. **Create a Quiz**
+3. **Create a Test from Database** ✨ *New Feature*
+   - Click "Create Test" in the navigation bar
+   - Select the JLPT level (N5, N4, N3, N2, N1)
+   - Choose selection mode:
+     - **By Chapter**: Enter chapter numbers (e.g., `1,2,5` or `3-7`)
+     - **By Entry Range**: Enter entry ID range (e.g., start: 1, end: 100)
+   - Optionally specify the number of questions
+   - Click "Create Test" to generate a random test from the database
+   - The system will fetch questions from the `mimikara_n3_questions.db` database
+
+4. **Create a Custom Quiz**
    - Click "Create Quiz" in the navigation bar
    - Fill in the quiz title and description
    - Add questions with 4 multiple-choice options
@@ -157,13 +163,13 @@ The frontend server will start at `http://localhost:3000`
    - Click "Add Question" to add more questions
    - Submit to create the quiz
 
-4. **Take a Quiz**
-   - Click "Start Quiz" on any quiz card
+5. **Take a Quiz or Test**
+   - Click "Start Quiz" on any quiz card or navigate to a generated test
    - Answer questions one by one using the Quizzi-style interface
    - Use "Next" and "Previous" buttons to navigate
    - Submit your answers when complete
 
-5. **View Results**
+6. **View Results**
    - After submission, view your score and percentage
    - Review all questions with correct/incorrect answers highlighted
    - Retake the quiz or return to the quiz list

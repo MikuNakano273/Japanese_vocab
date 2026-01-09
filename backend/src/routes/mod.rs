@@ -295,7 +295,7 @@ pub async fn create_test(
     // Simple fallback: if nothing selected, try global selection without filters
     if rows.is_empty() {
         let query_any = format!("SELECT id, entry_id, q_type, prompt, options, correct_index, correct_answer FROM questions {} {}", order_clause, limit_clause);
-        let mut q_any = sqlx::query(&query_any);
+        let q_any = sqlx::query(&query_any);
         match q_any.fetch_all(pool).await {
             Ok(r2) => rows = r2,
             Err(_) => {
