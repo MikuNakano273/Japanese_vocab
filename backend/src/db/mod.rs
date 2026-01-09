@@ -129,6 +129,5 @@ pub async fn init_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         .execute(pool)
         .await?;
 
-    println!("Database tables initialized successfully (SQLite): entries, quizzes, n_level, questions, tests");
     Ok(())
 }

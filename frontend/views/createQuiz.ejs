@@ -55,18 +55,7 @@
                         <label for="numQuestions">Number of Questions (optional):</label>
                         <input type="number" id="numQuestions" name="numQuestions" min="1" placeholder="e.g., 20">
                     </div>
-                    <div class="form-group" style="margin-top:0.5rem;">
-                        <label>Quick chapter helpers:</label>
-                        <div>
-                            <button type="button" class="btn" data-ch="1">1</button>
-                            <button type="button" class="btn" data-ch="2">2</button>
-                            <button type="button" class="btn" data-ch="3">3</button>
-                            <button type="button" class="btn" data-ch="4">4</button>
-                            <button type="button" class="btn" data-ch="5">5</button>
-                            <button type="button" id="clearChapters" class="btn">Clear</button>
-                        </div>
-                        <small>Click to append a chapter to the input above.</small>
-                    </div>
+                    <!-- Quick chapter helper buttons removed -->
                 </div>
 
                 <div id="rangeControls" style="display:none;">
@@ -103,9 +92,6 @@
         const rangeControls = document.getElementById('rangeControls');
         const messageEl = document.getElementById('createTestMessage');
         const chapterInput = document.getElementById('chapter');
-        const quickButtons = Array.from(document.querySelectorAll('#chapterControls button[data-ch]'));
-        const clearBtn = document.getElementById('clearChapters');
-
         function updateMode() {
             const mode = Array.from(modeRadios).find(r => r.checked).value;
             if (mode === 'chapter') {
@@ -119,27 +105,6 @@
 
         Array.from(modeRadios).forEach(r => r.addEventListener('change', updateMode));
         updateMode();
-
-        // Quick chapter buttons append number to input (avoid duplicates)
-        quickButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const val = btn.getAttribute('data-ch');
-                let cur = (chapterInput.value || '').trim();
-                if (!cur) {
-                    chapterInput.value = val;
-                    return;
-                }
-                // add with comma only if not present (allow ranges though)
-                const parts = cur.split(',').map(s => s.trim()).filter(Boolean);
-                if (!parts.includes(val)) {
-                    parts.push(val);
-                    chapterInput.value = parts.join(',');
-                }
-            });
-        });
-        clearBtn && clearBtn.addEventListener('click', () => {
-            chapterInput.value = '';
-        });
 
         // Parse chapters string like "1,3-5,8" into sorted unique number array
         function parseChaptersString(raw) {
