@@ -135,8 +135,17 @@ pub async fn init_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     // Note: SQLite doesn't have "ALTER TABLE ADD COLUMN IF NOT EXISTS"
     // so we check if column exists first
     
-    // Helper function to check if column exists
+    // Helper function to check if column exists in a table
+    // Note: This function is only called with hardcoded table names during initialization,
+    // not with user input. Table names are validated via allowlist.
     async fn column_exists(pool: &SqlitePool, table: &str, column: &str) -> bool {
+        // Validate table name against allowlist to prevent SQL injection
+        const ALLOWED_TABLES: &[&str] = &["questions", "entries", "quizzes", "tests", "n_level"];
+        if !ALLOWED_TABLES.contains(&table) {
+            return false;
+        }
+        
+        // Safe to use format! here since table name is validated
         let query = format!("PRAGMA table_info({})", table);
         if let Ok(rows) = sqlx::query(&query).fetch_all(pool).await {
             for row in rows {

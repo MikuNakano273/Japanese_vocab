@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Database initialization script for Japanese Vocabulary Quiz Application
 # This script creates and populates the SQLite database from the SQL file if needed
