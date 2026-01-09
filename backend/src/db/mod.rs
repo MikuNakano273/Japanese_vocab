@@ -1,4 +1,5 @@
 use sqlx::sqlite::SqlitePool;
+use sqlx::Row;
 
 // Note: the previous `connect()` helper was removed because the application
 // uses `SqlitePool::connect` directly in `main.rs`. If a centralized helper
@@ -128,6 +129,47 @@ pub async fn init_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     sqlx::query("CREATE INDEX IF NOT EXISTS idx_entry_id ON questions(entry_id);")
         .execute(pool)
         .await?;
+
+    // Add missing columns to questions table if they don't exist
+    // This handles the case where database was created from SQL file
+    // Note: SQLite doesn't have "ALTER TABLE ADD COLUMN IF NOT EXISTS"
+    // so we check if column exists first
+    
+    // Helper function to check if column exists
+    async fn column_exists(pool: &SqlitePool, table: &str, column: &str) -> bool {
+        let query = format!("PRAGMA table_info({})", table);
+        if let Ok(rows) = sqlx::query(&query).fetch_all(pool).await {
+            for row in rows {
+                if let Ok(name) = row.try_get::<String, _>("name") {
+                    if name == column {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
+    }
+
+    // Add quiz_id column if missing
+    if !column_exists(pool, "questions", "quiz_id").await {
+        sqlx::query("ALTER TABLE questions ADD COLUMN quiz_id INTEGER REFERENCES quizzes(id) ON DELETE SET NULL")
+            .execute(pool)
+            .await?;
+    }
+
+    // Add level column if missing
+    if !column_exists(pool, "questions", "level").await {
+        sqlx::query("ALTER TABLE questions ADD COLUMN level INTEGER REFERENCES n_level(id)")
+            .execute(pool)
+            .await?;
+    }
+
+    // Add chapter column if missing
+    if !column_exists(pool, "questions", "chapter").await {
+        sqlx::query("ALTER TABLE questions ADD COLUMN chapter INTEGER")
+            .execute(pool)
+            .await?;
+    }
 
     Ok(())
 }
