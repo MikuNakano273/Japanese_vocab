@@ -1,14 +1,14 @@
 let questionCount = 1;
 
 function addQuestion() {
-    const container = document.getElementById('questionsContainer');
-    questionCount++;
-    
-    const questionBlock = document.createElement('div');
-    questionBlock.className = 'question-block';
-    questionBlock.setAttribute('data-question-index', questionCount - 1);
-    
-    questionBlock.innerHTML = `
+  const container = document.getElementById("questionsContainer");
+  questionCount++;
+
+  const questionBlock = document.createElement("div");
+  questionBlock.className = "question-block";
+  questionBlock.setAttribute("data-question-index", questionCount - 1);
+
+  questionBlock.innerHTML = `
         <h3>Question ${questionCount}</h3>
         <div class="form-group">
             <label>Question Text:</label>
@@ -41,67 +41,71 @@ function addQuestion() {
         </div>
         <button type="button" class="btn btn-secondary" onclick="removeQuestion(this)">Remove Question</button>
     `;
-    
-    container.appendChild(questionBlock);
+
+  container.appendChild(questionBlock);
 }
 
 function removeQuestion(button) {
-    const questionBlock = button.closest('.question-block');
-    questionBlock.remove();
-    questionCount--;
-    updateQuestionNumbers();
+  const questionBlock = button.closest(".question-block");
+  questionBlock.remove();
+  questionCount--;
+  updateQuestionNumbers();
 }
 
 function updateQuestionNumbers() {
-    const questions = document.querySelectorAll('.question-block');
-    questions.forEach((block, index) => {
-        const h3 = block.querySelector('h3');
-        h3.textContent = `Question ${index + 1}`;
-    });
+  const questions = document.querySelectorAll(".question-block");
+  questions.forEach((block, index) => {
+    const h3 = block.querySelector("h3");
+    h3.textContent = `Question ${index + 1}`;
+  });
 }
 
-document.getElementById('createQuizForm').addEventListener('submit', async (e) => {
+document
+  .getElementById("createQuizForm")
+  .addEventListener("submit", async (e) => {
     e.preventDefault();
-    
+
     const formData = new FormData(e.target);
     const data = {
-        title: formData.get('title'),
-        description: formData.get('description'),
-        questions: []
+      title: formData.get("title"),
+      description: formData.get("description"),
+      questions: [],
     };
-    
+
     // Parse questions
-    const questionBlocks = document.querySelectorAll('.question-block');
+    const questionBlocks = document.querySelectorAll(".question-block");
     questionBlocks.forEach((block, index) => {
-        const question = {
-            text: formData.get(`questions[${index}][text]`),
-            options: [
-                formData.get(`questions[${index}][options][0]`),
-                formData.get(`questions[${index}][options][1]`),
-                formData.get(`questions[${index}][options][2]`),
-                formData.get(`questions[${index}][options][3]`)
-            ],
-            correct_answer: parseInt(formData.get(`questions[${index}][correct_answer]`))
-        };
-        data.questions.push(question);
+      const question = {
+        text: formData.get(`questions[${index}][text]`),
+        options: [
+          formData.get(`questions[${index}][options][0]`),
+          formData.get(`questions[${index}][options][1]`),
+          formData.get(`questions[${index}][options][2]`),
+          formData.get(`questions[${index}][options][3]`),
+        ],
+        correct_answer: parseInt(
+          formData.get(`questions[${index}][correct_answer]`),
+        ),
+      };
+      data.questions.push(question);
     });
-    
+
     try {
-        const response = await fetch('/quiz/create', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(data)
-        });
-        
-        if (response.ok) {
-            window.location.href = '/quiz/list';
-        } else {
-            alert('Failed to create quiz. Please try again.');
-        }
+      const response = await fetch("/quiz/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (response.ok) {
+        window.location.href = "/quiz/list";
+      } else {
+        alert("Failed to create quiz. Please try again.");
+      }
     } catch (error) {
-        console.error('Error:', error);
-        alert('An error occurred. Please try again.');
+      console.error("Error:", error);
+      alert("An error occurred. Please try again.");
     }
-});
+  });
