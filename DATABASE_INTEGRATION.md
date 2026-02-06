@@ -48,23 +48,7 @@ This document describes the database integration using SQLite and bug fixes made
 - Uses `last_insert_rowid()` for SQLite compatibility
 - `ORDER BY RANDOM()` for random question selection
 
-### 3. Database Initialization Script (`init_database.sh`)
-A bash script to initialize the SQLite database from the SQL file:
-- **Location**: `init_database.sh` (project root)
-- **Purpose**: Creates and populates SQLite `mimikara_n3_questions.db` file from `mimikara_n3_questions.db.sql`
-- **Features**:
-  - Creates backend data directory if needed
-  - Checks if database already exists and has data
-  - Only initializes if needed (idempotent)
-  - Provides user-friendly status messages
-  - Validates successful initialization
-
-**Usage**:
-```bash
-./init_database.sh
-```
-
-### 4. Environment Configuration
+### 3. Environment Configuration
 SQLite configuration using file-based database:
 
 **`backend/.env.example`**:
@@ -142,11 +126,11 @@ This ensures backward compatibility with databases created from the SQL file.
 
 ### Missing Database
 - Backend creates database file automatically if it doesn't exist
-- `init_database.sh` can pre-populate the database from SQL file
+- Backend automatically initializes required tables
 
 ### Empty Database
-- `init_database.sh` detects empty database and populates it
 - Backend automatically initializes required tables
+- Backend populates schema on first run
 
 ### Invalid Schema
 - Backend automatically adds missing columns using `column_exists()` helper
@@ -195,13 +179,12 @@ To fully utilize the filtering features:
 ## Testing
 
 ### Manual Testing Steps
-1. Optionally initialize database: `./init_database.sh` (or let backend create it)
-2. Configure backend: Update `backend/.env` if needed (default SQLite settings work out of box)
-3. Start backend: `cd backend && cargo run`
-4. Start frontend: `cd frontend && npm start`
-5. Navigate to `http://localhost:3000/test/create`
-6. Select options and create test
-7. Verify test is generated and displayed
+1. Configure backend: Update `backend/.env` if needed (default SQLite settings work out of box)
+2. Start backend: `cd backend && cargo run` (database will be auto-initialized)
+3. Start frontend: `cd frontend && npm start`
+4. Navigate to `http://localhost:3000/test/create`
+5. Select options and create test
+6. Verify test is generated and displayed
 
 ### API Testing
 ```bash
@@ -243,9 +226,8 @@ curl http://localhost:8081/api/tests/1 | jq '.'
 
 When deploying:
 1. Ensure the backend has write permissions to create the database file
-2. Run `init_database.sh` to pre-populate database (optional)
-3. Configure `DATABASE_URL` in backend `.env` file
-4. The database file will be created automatically on first run if it doesn't exist
+2. Configure `DATABASE_URL` in backend `.env` file
+3. The database file will be created automatically on first run if it doesn't exist
 
 ## Summary of Changes
 
