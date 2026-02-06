@@ -2,11 +2,11 @@ use crate::models::{CreateQuizRequest, Question, Quiz};
 use actix_web::{web, HttpResponse, Responder};
 use chrono::Utc;
 use serde_json::{json, Value as JsonValue};
-use sqlx::mysql::MySqlRow;
-use sqlx::{Row, MySqlPool};
+use sqlx::sqlite::SqliteRow;
+use sqlx::{Row, SqlitePool};
 
 /// List all quizzes
-pub async fn list_quizzes(pool: web::Data<MySqlPool>) -> impl Responder {
+pub async fn list_quizzes(pool: web::Data<SqlitePool>) -> impl Responder {
     let pool = pool.get_ref();
 
     let rows =
@@ -71,7 +71,7 @@ pub async fn list_quizzes(pool: web::Data<MySqlPool>) -> impl Responder {
 }
 
 /// Get a single quiz
-pub async fn get_quiz(pool: web::Data<MySqlPool>, quiz_id: web::Path<i32>) -> impl Responder {
+pub async fn get_quiz(pool: web::Data<SqlitePool>, quiz_id: web::Path<i32>) -> impl Responder {
     let pool = pool.get_ref();
     let id = quiz_id.into_inner() as i64;
 
@@ -131,7 +131,7 @@ pub async fn get_quiz(pool: web::Data<MySqlPool>, quiz_id: web::Path<i32>) -> im
 
 /// Create a quiz (and its questions)
 pub async fn create_quiz(
-    pool: web::Data<MySqlPool>,
+    pool: web::Data<SqlitePool>,
     quiz_data: web::Json<CreateQuizRequest>,
 ) -> impl Responder {
     let pool = pool.get_ref();
@@ -149,7 +149,7 @@ pub async fn create_quiz(
         }
     };
 
-    let quiz_id = res.last_insert_id() as i32;
+    let quiz_id = res.last_insert_rowid() as i32;
 
     for question in &quiz_data.questions {
         let options_json = match serde_json::to_string(&question.options) {
@@ -181,7 +181,7 @@ pub async fn create_quiz(
 /// Create a test based on selection criteria and store it in `tests` table.
 /// Minimal, production-safe behavior without debug output.
 pub async fn create_test(
-    pool: web::Data<MySqlPool>,
+    pool: web::Data<SqlitePool>,
     payload: web::Json<JsonValue>,
 ) -> impl Responder {
     let pool = pool.get_ref();
@@ -285,7 +285,7 @@ pub async fn create_test(
         }
     }
 
-    let mut rows: Vec<MySqlRow> = match q.fetch_all(pool).await {
+    let mut rows: Vec<SqliteRow> = match q.fetch_all(pool).await {
         Ok(r) => r,
         Err(_) => {
             return HttpResponse::InternalServerError().json(json!({"error":"Database error"}))
@@ -348,14 +348,14 @@ pub async fn create_test(
         }
     };
 
-    let test_id = res.last_insert_id();
+    let test_id = res.last_insert_rowid();
     let redirect = format!("/test/{}", test_id);
 
     HttpResponse::Created().json(json!({"id": test_id, "redirect": redirect}))
 }
 
 /// Get a generated test by id
-pub async fn get_test(pool: web::Data<MySqlPool>, test_id: web::Path<i64>) -> impl Responder {
+pub async fn get_test(pool: web::Data<SqlitePool>, test_id: web::Path<i64>) -> impl Responder {
     let pool = pool.get_ref();
     let id = test_id.into_inner();
 

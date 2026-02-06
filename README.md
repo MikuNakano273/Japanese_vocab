@@ -1,12 +1,12 @@
 # Japanese Vocabulary Quiz Application
 
-A full-stack quiz application for learning Japanese vocabulary, built with Node.js frontend, Rust backend, and MySQL database. Designed for localhost single-user deployment with a Quizzi-style interface.
+A full-stack quiz application for learning Japanese vocabulary, built with Node.js frontend, Rust backend, and SQLite database. Designed for localhost single-user deployment with a Quizzi-style interface.
 
 ## 🏗️ Architecture
 
 - **Frontend**: Node.js with Express (MVC pattern)
 - **Backend**: Rust with Actix-web
-- **Database**: MySQL
+- **Database**: SQLite
 - **Design**: Quizzi-style quiz interface
 
 ## ✨ Features
@@ -16,7 +16,7 @@ A full-stack quiz application for learning Japanese vocabulary, built with Node.
 - 📊 Real-time scoring (statistics only, not saved to database)
 - 🎨 Modern, responsive design
 - 🔄 MVC architecture for clean code organization
-- 🚀 Fast Rust backend with MySQL database
+- 🚀 Fast Rust backend with SQLite database
 
 ## 📋 Prerequisites
 
@@ -24,7 +24,6 @@ Before you begin, ensure you have the following installed:
 
 - **Node.js** (v16 or higher)
 - **Rust** (latest stable version)
-- **MySQL** (v5.7 or higher, or v8.0+)
 - **Cargo** (comes with Rust)
 
 ## 🚀 Installation & Setup
@@ -50,52 +49,19 @@ Use the automated setup script:
 
 ### 3. Database Setup
 
-The application uses a MySQL database (`japanese_vocab`) that contains Japanese vocabulary questions.
+The application uses a SQLite database (`mimikara_n3_questions.db`) that contains Japanese vocabulary questions.
 
-#### Step 1: Ensure MySQL is Running
+#### Step 1: Initialize Database (Optional)
 
-Make sure MySQL server is running on your system:
-
-```bash
-# For macOS (Homebrew):
-brew services start mysql
-
-# For Ubuntu/Debian:
-sudo systemctl start mysql
-
-# For Windows:
-# Start MySQL service from Services app or MySQL Workbench
-```
-
-#### Step 2: Configure Database Connection
-
-Copy the example environment file and update it with your MySQL credentials:
-
-```bash
-cd backend
-cp .env.example .env
-```
-
-Edit `.env` file and update the `DATABASE_URL`:
-
-```env
-DATABASE_URL=mysql://username:password@localhost:3306/japanese_vocab
-PORT=8081
-```
-
-Replace `username` and `password` with your MySQL credentials.
-
-#### Step 3: Initialize Database
-
-Run the initialization script to create and populate the database:
+The backend will automatically create and initialize the database file on first run. If you want to pre-populate it from the SQL file, you can use the initialization script:
 
 ```bash
 # From project root
-./init_database_mysql.sh
+./init_database.sh
 ```
 
 This script will:
-- Create the `japanese_vocab` database if it doesn't exist
+- Create the `mimikara_n3_questions.db` file if it doesn't exist
 - Populate it with entries and questions from `mimikara_n3_questions.db.sql`
 - Skip initialization if the database already exists and has data
 
@@ -107,14 +73,14 @@ The database includes:
 
 ### 4. Manual Database Inspection
 
-If you want to manually inspect or run SQL against the database, use the `mysql` CLI:
+If you want to manually inspect or run SQL against the database, use the `sqlite3` CLI:
 
 ```bash
 # Connect to the database
-mysql -u username -p japanese_vocab
+sqlite3 mimikara_n3_questions.db
 
-# Examples inside MySQL:
-SHOW TABLES;
+# Examples inside SQLite:
+.tables
 SELECT COUNT(*) FROM entries;
 SELECT COUNT(*) FROM questions;
 SELECT * FROM questions LIMIT 5;
@@ -141,16 +107,15 @@ cd backend
 # Copy environment file (if not done already)
 cp .env.example .env
 
-# Edit .env if needed to change MySQL connection settings
-# Example:
-# DATABASE_URL=mysql://root:password@localhost:3306/japanese_vocab
+# The default .env uses SQLite:
+# DATABASE_URL=sqlite://mimikara_n3_questions.db
 # PORT=8081
 
 # Build and run
 cargo build --release
 cargo run
 
-# The backend will start and connect to MySQL database.
+# The backend will start and connect to SQLite database.
 # Default backend URL: http://localhost:8081
 ```
 
@@ -246,7 +211,7 @@ PORT=3000
 ### Backend Environment Variables (.env)
 
 ```env
-DATABASE_URL=mysql://root:password@localhost:3306/japanese_vocab
+DATABASE_URL=sqlite://mimikara_n3_questions.db
 PORT=8081
 ```
 
@@ -268,11 +233,11 @@ cargo run
 
 ### Database Management
 
-View tables (using MySQL client):
+View tables (using SQLite client):
 ```bash
-mysql -u username -p japanese_vocab
-# then in MySQL:
-SHOW TABLES;
+sqlite3 mimikara_n3_questions.db
+# then in SQLite:
+.tables
 # or run a query:
 SELECT * FROM quizzes;
 SELECT * FROM questions;
