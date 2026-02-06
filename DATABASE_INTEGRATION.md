@@ -1,91 +1,177 @@
 # Database Integration - Implementation Notes
 
 ## Overview
-This document describes the changes made to integrate the `mimikara_n3_questions.db` SQLite database for quiz/test generation.
+This document describes the migration from SQLite to MySQL and bug fixes made to the database integration.
 
 ## Changes Made
 
-### 1. Database Initialization Script (`init_database.sh`)
-Created a bash script to initialize the SQLite database from the SQL file:
-- **Location**: `init_database.sh` (project root)
-- **Purpose**: Creates and populates `backend/data/mimikara_n3_questions.db` from `mimikara_n3_questions.db.sql`
+### 1. Bug Fix: Column Name Mismatch
+**Problem**: The database schema defined a `prompt` column, but the application code was trying to query/insert using `text` column.
+
+**Files Affected**: `backend/src/routes/mod.rs`
+
+**Changes**:
+- Changed `SELECT id, text, options, correct_answer` to `SELECT id, prompt, options, correct_answer` in `list_quizzes()` function (line 30)
+- Changed `r.try_get("text")` to `r.try_get("prompt")` in `list_quizzes()` function (line 44)
+- Changed `SELECT id, text, options, correct_answer` to `SELECT id, prompt, options, correct_answer` in `get_quiz()` function (line 88)
+- Changed `r.try_get("text")` to `r.try_get("prompt")` in `get_quiz()` function (line 104)
+- Changed `INSERT INTO questions (quiz_id, text, ...)` to `INSERT INTO questions (quiz_id, prompt, ...)` in `create_quiz()` function (line 164)
+
+**Impact**: This bug would have prevented the application from properly retrieving and creating quiz questions.
+
+### 2. Database Migration from SQLite to MySQL
+
+#### Cargo.toml Changes
+- Changed sqlx features from `["sqlite", ...]` to `["mysql", ...]`
+
+#### Backend Database Module (`backend/src/db/mod.rs`)
+**Changes**:
+- Changed `SqlitePool` to `MySqlPool` throughout
+- Updated table creation syntax for MySQL:
+  - `INTEGER PRIMARY KEY AUTOINCREMENT` → `INT AUTO_INCREMENT PRIMARY KEY`
+  - `TEXT DEFAULT (datetime('now'))` → `DATETIME DEFAULT CURRENT_TIMESTAMP`
+  - Added `ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci` to all tables
+  - Added explicit `FOREIGN KEY` constraints for MySQL
+- Updated `INSERT OR IGNORE` to `INSERT IGNORE` (MySQL syntax)
+- Changed integer bindings from `i64` to `i32` for n_level inserts
+- Rewrote `column_exists()` helper function:
+  - Removed SQLite's `PRAGMA table_info()` query
+  - Added MySQL's `INFORMATION_SCHEMA.COLUMNS` query
+- Updated ALTER TABLE statements for MySQL foreign key syntax
+
+#### Backend Main File (`backend/src/main.rs`)
+**Changes**:
+- Removed SQLite file-based connection logic
+- Added MySQL connection using `DATABASE_URL` environment variable
+- Changed from `SqlitePool::connect()` to `MySqlPool::connect()`
+- Removed file system operations for database file creation
+- Added connection status logging
+
+#### Backend Routes (`backend/src/routes/mod.rs`)
+**Changes**:
+- Changed all `web::Data<SqlitePool>` to `web::Data<MySqlPool>`
+- Changed `SqliteRow` to `MySqlRow`
+- Changed `last_insert_rowid()` to `last_insert_id()` for MySQL compatibility
+
+### 3. Database Initialization Script (`init_database_mysql.sh`)
+Created a new bash script to initialize the MySQL database from the SQL file:
+- **Location**: `init_database_mysql.sh` (project root)
+- **Purpose**: Creates and populates MySQL `japanese_vocab` database from `mimikara_n3_questions.db.sql`
 - **Features**:
+  - Checks if MySQL is accessible
+  - Creates database with utf8mb4 charset
   - Checks if database already exists and has data
+  - Converts SQLite SQL syntax to MySQL syntax:
+    - `BEGIN TRANSACTION` → `START TRANSACTION`
+    - `SERIAL PRIMARY KEY` → `INT AUTO_INCREMENT PRIMARY KEY`
+    - `TIMESTAMP` → `DATETIME`
   - Only initializes if needed (idempotent)
   - Provides user-friendly status messages
   - Validates successful initialization
 
 **Usage**:
 ```bash
-./init_database.sh
+./init_database_mysql.sh
 ```
 
-### 2. Backend Database Module Updates (`backend/src/db/mod.rs`)
-Enhanced the database initialization to handle pre-existing databases:
-
-**Changes**:
-- Added `use sqlx::Row;` import for row operations
-- Implemented `column_exists()` helper function to check for missing columns
-- Added schema migration logic to add missing columns:
-  - `quiz_id`: Links questions to quizzes (nullable)
-  - `level`: JLPT level reference (n5=1, n4=2, n3=3, n2=4, n1=5)
-  - `chapter`: Chapter number for grouping questions
-
-**Why This Matters**:
-The SQL file (`mimikara_n3_questions.db.sql`) creates a questions table without these columns. The backend expects them for filtering and test generation. The migration ensures backward compatibility with pre-existing databases.
-
-### 3. Backend Routes Fix (`backend/src/routes/mod.rs`)
-Fixed a compiler warning:
-- Removed unnecessary `mut` keyword from `q_any` variable
+**Environment Variables**:
+- `MYSQL_USER` (default: root)
+- `MYSQL_PASSWORD` (default: password)
+- `MYSQL_HOST` (default: localhost)
+- `MYSQL_PORT` (default: 3306)
 
 ### 4. Environment Configuration Updates
-Updated default configurations to use SQLite:
+Updated default configurations to use MySQL:
 
 **`backend/.env.example`**:
-- Changed from PostgreSQL to SQLite connection string
-- Updated port to 8081 (to match running backend)
-
-**`frontend/.env.example`**:
-- Updated BACKEND_URL to point to port 8081
+- Changed from SQLite to MySQL connection string
+- Format: `mysql://username:password@host:port/database`
+- Default: `mysql://root:password@localhost:3306/japanese_vocab`
 
 ### 5. Documentation Updates (`README.md`)
-Enhanced the README with:
-- Database initialization instructions
-- Database statistics (1760 entries, 10232 questions)
-- "Create Test" feature documentation
-- Updated usage instructions
+Enhanced the README with MySQL setup instructions:
+- Updated architecture section to mention MySQL
+- Added MySQL to prerequisites
+- Detailed MySQL setup steps:
+  - Starting MySQL server
+  - Configuring database connection
+  - Running initialization script
+- Updated manual database inspection with MySQL CLI
+- Updated all configuration examples
+- Updated database management section
 
 ## Database Schema
 
-### Tables Created by SQL File
+### Tables in MySQL Database
 1. **entries** - Vocabulary entries
-   - id, list_index, kanji, kana, meaning
+   - id: INT AUTO_INCREMENT PRIMARY KEY
+   - list_index: INT
+   - kanji: TEXT
+   - kana: TEXT
+   - meaning: TEXT
 
-2. **questions** - Quiz questions (initially)
-   - id, entry_id, q_type, prompt, correct_answer, options, correct_index, created_at
+2. **quizzes** - User-created quizzes
+   - id: INT AUTO_INCREMENT PRIMARY KEY
+   - title: VARCHAR(255) NOT NULL
+   - description: TEXT
+   - created_at: DATETIME DEFAULT CURRENT_TIMESTAMP
 
-### Columns Added by Backend
-The backend adds these columns on first run if they don't exist:
-- **quiz_id**: INTEGER (references quizzes table)
-- **level**: INTEGER (references n_level table)
-- **chapter**: INTEGER (chapter grouping)
+3. **n_level** - JLPT level mapping
+   - id: INT PRIMARY KEY (1→n5, 2→n4, 3→n3, 4→n2, 5→n1)
+   - level: VARCHAR(10) NOT NULL
 
-### Additional Tables Created by Backend
-- **quizzes**: User-created quizzes
-- **n_level**: JLPT level mapping (1→n5, 2→n4, 3→n3, 4→n2, 5→n1)
-- **tests**: Generated test storage
+4. **questions** - Quiz questions
+   - id: INT AUTO_INCREMENT PRIMARY KEY
+   - entry_id: INT (FK → entries.id)
+   - quiz_id: INT (FK → quizzes.id, nullable)
+   - q_type: VARCHAR(50)
+   - prompt: TEXT (Note: Previously incorrectly referenced as "text" in code)
+   - correct_answer: TEXT
+   - options: TEXT (JSON string)
+   - correct_index: INT
+   - level: INT (FK → n_level.id)
+   - chapter: INT
+   - created_at: DATETIME DEFAULT CURRENT_TIMESTAMP
+
+5. **tests** - Generated tests
+   - id: INT AUTO_INCREMENT PRIMARY KEY
+   - title: VARCHAR(255)
+   - questions: TEXT (JSON string)
+   - created_at: DATETIME DEFAULT CURRENT_TIMESTAMP
+
+### Indexes
+- `idx_entry_id` on questions(entry_id) for faster lookups
+
+### Foreign Key Constraints
+- questions.entry_id → entries.id (ON DELETE CASCADE)
+- questions.quiz_id → quizzes.id (ON DELETE SET NULL)
+- questions.level → n_level.id
+
+All tables use:
+- Engine: InnoDB
+- Character Set: utf8mb4
+- Collation: utf8mb4_unicode_ci
+
+### Backend Schema Migration
+The backend automatically adds missing columns to the questions table on first run if they don't exist:
+- **quiz_id**: INT (FK to quizzes table)
+- **level**: INT (FK to n_level table)
+- **chapter**: INT (for chapter grouping)
+
+This ensures backward compatibility with databases created from the SQL file.
 
 ## Error Handling
 
 ### Missing Database
-- Backend creates empty database file if missing
-- `init_database.sh` populates it from SQL file
+- Backend fails to connect with appropriate error message
+- `init_database_mysql.sh` creates the database if it doesn't exist
 
 ### Empty Database
-- `init_database.sh` detects empty database and repopulates
+- `init_database_mysql.sh` detects empty database and populates it
 
 ### Invalid Schema
-- Backend automatically adds missing columns
+- Backend automatically adds missing columns using `column_exists()` helper
+- Uses INFORMATION_SCHEMA to detect existing columns
 - Foreign key constraints are properly handled
 
 ### Database Connection Errors
@@ -130,12 +216,14 @@ To fully utilize the filtering features:
 ## Testing
 
 ### Manual Testing Steps
-1. Initialize database: `./init_database.sh`
-2. Start backend: `cd backend && cargo run`
-3. Start frontend: `cd frontend && npm start`
-4. Navigate to `http://localhost:3000/test/create`
-5. Select options and create test
-6. Verify test is generated and displayed
+1. Ensure MySQL is running
+2. Initialize database: `./init_database_mysql.sh`
+3. Configure backend: Update `backend/.env` with MySQL credentials
+4. Start backend: `cd backend && cargo run`
+5. Start frontend: `cd frontend && npm start`
+6. Navigate to `http://localhost:3000/test/create`
+7. Select options and create test
+8. Verify test is generated and displayed
 
 ### API Testing
 ```bash
@@ -151,9 +239,10 @@ curl http://localhost:8081/api/tests/1 | jq '.'
 ## Security Considerations
 
 ### SQL Injection Prevention
-- All queries use parameterized bindings
+- All queries use parameterized bindings with sqlx
 - User input is validated before query building
-- SQLite connection uses safe default settings
+- MySQL connection uses safe default settings
+- Table names validated against allowlist in `column_exists()` function
 
 ### Input Validation
 - Backend validates level, mode, chapters, range values
@@ -163,18 +252,53 @@ curl http://localhost:8081/api/tests/1 | jq '.'
 ## Performance
 
 ### Database Size
-- ~2.2 MB database file
-- Fast query performance with indexes on entry_id and q_type
+- ~2.2 MB of data (1760 entries, 10232 questions)
+- Fast query performance with InnoDB engine
+- Index on entry_id for faster lookups
 - RANDOM ordering is efficient for small result sets
 
-### Caching
-- No caching currently implemented
-- SQLite connection pooling via sqlx
+### Connection Pooling
+- MySQL connection pooling via sqlx
+- Configurable pool size through sqlx settings
 
 ## Deployment Notes
 
 When deploying:
-1. Ensure `init_database.sh` is run before first backend start
-2. Database file is in `backend/data/` directory
-3. Backend has write permissions for the database file
-4. SQLite library is available on the system
+1. Ensure MySQL server is running and accessible
+2. Run `init_database_mysql.sh` to create and populate database
+3. Configure `DATABASE_URL` in backend `.env` file
+4. Ensure backend has network access to MySQL server
+5. Configure MySQL user with appropriate permissions:
+   ```sql
+   CREATE USER 'appuser'@'localhost' IDENTIFIED BY 'password';
+   GRANT ALL PRIVILEGES ON japanese_vocab.* TO 'appuser'@'localhost';
+   FLUSH PRIVILEGES;
+   ```
+
+## Migration from SQLite
+
+If migrating from an existing SQLite installation:
+1. Export data from SQLite database (if needed)
+2. Install and configure MySQL
+3. Run `init_database_mysql.sh` to set up MySQL database
+4. Update `backend/.env` with MySQL connection string
+5. Rebuild backend: `cd backend && cargo build --release`
+6. Start backend and verify connection
+
+## Summary of Changes
+
+### Bug Fixes
+- ✅ Fixed column name mismatch ("text" vs "prompt") in 5 locations
+- ✅ Queries now correctly reference the "prompt" column
+
+### Database Migration
+- ✅ Migrated from SQLite to MySQL
+- ✅ Updated all table schemas for MySQL
+- ✅ Updated all SQL queries for MySQL compatibility
+- ✅ Created MySQL initialization script
+- ✅ Updated documentation for MySQL setup
+
+### Security Improvements
+- ✅ Table name validation in column_exists function
+- ✅ Parameterized queries throughout
+- ✅ Proper foreign key constraints in MySQL

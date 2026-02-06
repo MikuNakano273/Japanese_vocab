@@ -2,11 +2,11 @@ use crate::models::{CreateQuizRequest, Question, Quiz};
 use actix_web::{web, HttpResponse, Responder};
 use chrono::Utc;
 use serde_json::{json, Value as JsonValue};
-use sqlx::sqlite::SqliteRow;
-use sqlx::{Row, SqlitePool};
+use sqlx::mysql::MySqlRow;
+use sqlx::{Row, MySqlPool};
 
 /// List all quizzes
-pub async fn list_quizzes(pool: web::Data<SqlitePool>) -> impl Responder {
+pub async fn list_quizzes(pool: web::Data<MySqlPool>) -> impl Responder {
     let pool = pool.get_ref();
 
     let rows =
@@ -27,7 +27,7 @@ pub async fn list_quizzes(pool: web::Data<SqlitePool>) -> impl Responder {
         let quiz_id: i64 = row.try_get("id").unwrap_or(0);
 
         let questions_rows = match sqlx::query(
-            "SELECT id, text, options, correct_answer FROM questions WHERE quiz_id = ?",
+            "SELECT id, prompt, options, correct_answer FROM questions WHERE quiz_id = ?",
         )
         .bind(quiz_id)
         .fetch_all(pool)
@@ -41,7 +41,7 @@ pub async fn list_quizzes(pool: web::Data<SqlitePool>) -> impl Responder {
             .into_iter()
             .map(|r| {
                 let id: i64 = r.try_get("id").unwrap_or(0);
-                let text: String = r.try_get("text").unwrap_or_default();
+                let text: String = r.try_get("prompt").unwrap_or_default();
                 let options_text: String =
                     r.try_get("options").unwrap_or_else(|_| "[]".to_string());
                 let options: Vec<String> = serde_json::from_str(&options_text).unwrap_or_default();
@@ -71,7 +71,7 @@ pub async fn list_quizzes(pool: web::Data<SqlitePool>) -> impl Responder {
 }
 
 /// Get a single quiz
-pub async fn get_quiz(pool: web::Data<SqlitePool>, quiz_id: web::Path<i32>) -> impl Responder {
+pub async fn get_quiz(pool: web::Data<MySqlPool>, quiz_id: web::Path<i32>) -> impl Responder {
     let pool = pool.get_ref();
     let id = quiz_id.into_inner() as i64;
 
@@ -85,7 +85,7 @@ pub async fn get_quiz(pool: web::Data<SqlitePool>, quiz_id: web::Path<i32>) -> i
     };
 
     let questions_rows = match sqlx::query(
-        "SELECT id, text, options, correct_answer FROM questions WHERE quiz_id = ?",
+        "SELECT id, prompt, options, correct_answer FROM questions WHERE quiz_id = ?",
     )
     .bind(id)
     .fetch_all(pool)
@@ -102,7 +102,7 @@ pub async fn get_quiz(pool: web::Data<SqlitePool>, quiz_id: web::Path<i32>) -> i
         .into_iter()
         .map(|r| {
             let id: i64 = r.try_get("id").unwrap_or(0);
-            let text: String = r.try_get("text").unwrap_or_default();
+            let text: String = r.try_get("prompt").unwrap_or_default();
             let options_text: String = r.try_get("options").unwrap_or_else(|_| "[]".to_string());
             let options: Vec<String> = serde_json::from_str(&options_text).unwrap_or_default();
             let correct_answer: i64 = r.try_get("correct_answer").unwrap_or(0);
@@ -131,7 +131,7 @@ pub async fn get_quiz(pool: web::Data<SqlitePool>, quiz_id: web::Path<i32>) -> i
 
 /// Create a quiz (and its questions)
 pub async fn create_quiz(
-    pool: web::Data<SqlitePool>,
+    pool: web::Data<MySqlPool>,
     quiz_data: web::Json<CreateQuizRequest>,
 ) -> impl Responder {
     let pool = pool.get_ref();
@@ -149,7 +149,7 @@ pub async fn create_quiz(
         }
     };
 
-    let quiz_id = res.last_insert_rowid() as i32;
+    let quiz_id = res.last_insert_id() as i32;
 
     for question in &quiz_data.questions {
         let options_json = match serde_json::to_string(&question.options) {
@@ -161,7 +161,7 @@ pub async fn create_quiz(
         };
 
         if let Err(_) = sqlx::query(
-            "INSERT INTO questions (quiz_id, text, options, correct_answer) VALUES (?, ?, ?, ?)",
+            "INSERT INTO questions (quiz_id, prompt, options, correct_answer) VALUES (?, ?, ?, ?)",
         )
         .bind(quiz_id as i64)
         .bind(&question.text)
@@ -181,7 +181,7 @@ pub async fn create_quiz(
 /// Create a test based on selection criteria and store it in `tests` table.
 /// Minimal, production-safe behavior without debug output.
 pub async fn create_test(
-    pool: web::Data<SqlitePool>,
+    pool: web::Data<MySqlPool>,
     payload: web::Json<JsonValue>,
 ) -> impl Responder {
     let pool = pool.get_ref();
@@ -285,7 +285,7 @@ pub async fn create_test(
         }
     }
 
-    let mut rows: Vec<SqliteRow> = match q.fetch_all(pool).await {
+    let mut rows: Vec<MySqlRow> = match q.fetch_all(pool).await {
         Ok(r) => r,
         Err(_) => {
             return HttpResponse::InternalServerError().json(json!({"error":"Database error"}))
@@ -348,14 +348,14 @@ pub async fn create_test(
         }
     };
 
-    let test_id = res.last_insert_rowid();
+    let test_id = res.last_insert_id();
     let redirect = format!("/test/{}", test_id);
 
     HttpResponse::Created().json(json!({"id": test_id, "redirect": redirect}))
 }
 
 /// Get a generated test by id
-pub async fn get_test(pool: web::Data<SqlitePool>, test_id: web::Path<i64>) -> impl Responder {
+pub async fn get_test(pool: web::Data<MySqlPool>, test_id: web::Path<i64>) -> impl Responder {
     let pool = pool.get_ref();
     let id = test_id.into_inner();
 
