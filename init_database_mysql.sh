@@ -58,7 +58,6 @@ TEMP_SQL="/tmp/mysql_import_$$.sql"
 cat "$SQL_FILE" | \
     sed 's/BEGIN TRANSACTION;/START TRANSACTION;/g' | \
     sed 's/SERIAL PRIMARY KEY/INT AUTO_INCREMENT PRIMARY KEY/g' | \
-    sed 's/TEXT/TEXT/g' | \
     sed 's/INTEGER/INT/g' | \
     sed 's/TIMESTAMP/DATETIME/g' | \
     sed 's/COMMIT;/COMMIT;/g' | \

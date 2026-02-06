@@ -142,12 +142,9 @@ pub async fn init_db(pool: &MySqlPool) -> Result<(), sqlx::Error> {
             return false;
         }
         
-        // Get the database name from the connection
         // For MySQL, we query information_schema
-        let query = format!(
-            "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?"
-        );
-        if let Ok(rows) = sqlx::query(&query)
+        let query = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?";
+        if let Ok(rows) = sqlx::query(query)
             .bind(table)
             .bind(column)
             .fetch_all(pool)
@@ -160,16 +157,28 @@ pub async fn init_db(pool: &MySqlPool) -> Result<(), sqlx::Error> {
 
     // Add quiz_id column if missing
     if !column_exists(pool, "questions", "quiz_id").await {
-        sqlx::query("ALTER TABLE questions ADD COLUMN quiz_id INT, ADD FOREIGN KEY (quiz_id) REFERENCES quizzes(id) ON DELETE SET NULL")
+        // Add column first
+        sqlx::query("ALTER TABLE questions ADD COLUMN quiz_id INT")
             .execute(pool)
             .await?;
+        // Then add foreign key constraint
+        // Note: This may fail if the constraint name already exists, which is fine
+        let _ = sqlx::query("ALTER TABLE questions ADD FOREIGN KEY (quiz_id) REFERENCES quizzes(id) ON DELETE SET NULL")
+            .execute(pool)
+            .await;
     }
 
     // Add level column if missing
     if !column_exists(pool, "questions", "level").await {
-        sqlx::query("ALTER TABLE questions ADD COLUMN level INT, ADD FOREIGN KEY (level) REFERENCES n_level(id)")
+        // Add column first
+        sqlx::query("ALTER TABLE questions ADD COLUMN level INT")
             .execute(pool)
             .await?;
+        // Then add foreign key constraint
+        // Note: This may fail if the constraint name already exists, which is fine
+        let _ = sqlx::query("ALTER TABLE questions ADD FOREIGN KEY (level) REFERENCES n_level(id)")
+            .execute(pool)
+            .await;
     }
 
     // Add chapter column if missing
