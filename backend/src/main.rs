@@ -4,25 +4,25 @@ mod routes;
 
 use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
-/* MySqlPool is Clone and can be cloned directly when passed into actix-web App */
-use sqlx::MySqlPool;
+/* SqlitePool is Clone and can be cloned directly when passed into actix-web App */
+use sqlx::SqlitePool;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv::dotenv().ok();
 
-    // Get MySQL database URL from environment variable
+    // Get SQLite database URL from environment variable
     let database_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "mysql://root:password@localhost:3306/japanese_vocab".to_string());
+        .unwrap_or_else(|_| "sqlite://mimikara_n3_questions.db".to_string());
 
-    println!("Connecting to MySQL database...");
+    println!("Connecting to SQLite database...");
 
-    // Create a connection pool to the MySQL database
-    let pool = MySqlPool::connect(&database_url)
+    // Create a connection pool to the SQLite database
+    let pool = SqlitePool::connect(&database_url)
         .await
-        .expect("Failed to connect to MySQL database");
+        .expect("Failed to connect to SQLite database");
 
-    println!("Connected to MySQL database successfully");
+    println!("Connected to SQLite database successfully");
     
     db::init_db(&pool)
         .await
@@ -30,7 +30,7 @@ async fn main() -> std::io::Result<()> {
 
     println!("Database initialized successfully");
 
-    // MySqlPool is cloneable and safe to share between threads (MySqlPool implements Clone)
+    // SqlitePool is cloneable and safe to share between threads (SqlitePool implements Clone)
     // No Arc wrapper is needed; we'll clone the pool directly when providing it to App.
 
     HttpServer::new(move || {
@@ -42,7 +42,7 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .wrap(cors)
-            // provide the shared MySQL pool to handlers
+            // provide the shared SQLite pool to handlers
             .app_data(web::Data::new(pool.clone()))
             // allow larger JSON payloads for test creation (adjust limit as needed)
             .app_data(web::JsonConfig::default().limit(10 * 1024 * 1024))
