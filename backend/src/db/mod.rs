@@ -162,10 +162,14 @@ pub async fn init_db(pool: &MySqlPool) -> Result<(), sqlx::Error> {
             .execute(pool)
             .await?;
         // Then add foreign key constraint
-        // Note: This may fail if the constraint name already exists, which is fine
-        let _ = sqlx::query("ALTER TABLE questions ADD FOREIGN KEY (quiz_id) REFERENCES quizzes(id) ON DELETE SET NULL")
+        // Note: Silently ignore errors if constraint already exists or for invalid data
+        // This is acceptable as the column is the important part for functionality
+        if let Err(e) = sqlx::query("ALTER TABLE questions ADD FOREIGN KEY (quiz_id) REFERENCES quizzes(id) ON DELETE SET NULL")
             .execute(pool)
-            .await;
+            .await {
+            // Log error for debugging but don't fail initialization
+            eprintln!("Note: Could not add foreign key constraint for quiz_id (may already exist): {}", e);
+        }
     }
 
     // Add level column if missing
@@ -175,10 +179,14 @@ pub async fn init_db(pool: &MySqlPool) -> Result<(), sqlx::Error> {
             .execute(pool)
             .await?;
         // Then add foreign key constraint
-        // Note: This may fail if the constraint name already exists, which is fine
-        let _ = sqlx::query("ALTER TABLE questions ADD FOREIGN KEY (level) REFERENCES n_level(id)")
+        // Note: Silently ignore errors if constraint already exists or for invalid data
+        // This is acceptable as the column is the important part for functionality
+        if let Err(e) = sqlx::query("ALTER TABLE questions ADD FOREIGN KEY (level) REFERENCES n_level(id)")
             .execute(pool)
-            .await;
+            .await {
+            // Log error for debugging but don't fail initialization
+            eprintln!("Note: Could not add foreign key constraint for level (may already exist): {}", e);
+        }
     }
 
     // Add chapter column if missing

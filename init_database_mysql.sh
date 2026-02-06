@@ -60,7 +60,6 @@ cat "$SQL_FILE" | \
     sed 's/SERIAL PRIMARY KEY/INT AUTO_INCREMENT PRIMARY KEY/g' | \
     sed 's/INTEGER/INT/g' | \
     sed 's/TIMESTAMP/DATETIME/g' | \
-    sed 's/COMMIT;/COMMIT;/g' | \
     grep -v "^PRAGMA" > "$TEMP_SQL"
 
 # Import the converted SQL
