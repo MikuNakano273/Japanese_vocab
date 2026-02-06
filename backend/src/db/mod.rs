@@ -1,4 +1,5 @@
 use sqlx::sqlite::SqlitePool;
+use sqlx::Row;
 
 // Note: the previous `connect()` helper was removed because the application
 // uses `SqlitePool::connect` directly in `main.rs`. If a centralized helper
