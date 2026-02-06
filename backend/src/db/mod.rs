@@ -1,33 +1,27 @@
-use sqlx::sqlite::SqlitePool;
-use sqlx::Row;
+use sqlx::mysql::MySqlPool;
 
 // Note: the previous `connect()` helper was removed because the application
-// uses `SqlitePool::connect` directly in `main.rs`. If a centralized helper
+// uses `MySqlPool::connect` directly in `main.rs`. If a centralized helper
 // is needed later, it can be reintroduced here.
 
-/// Initialize required tables for the application in SQLite.
+/// Initialize required tables for the application in MySQL.
 ///
-/// Notes about type differences for SQLite:
-/// - `INTEGER PRIMARY KEY AUTOINCREMENT` is used for id
-/// - `TEXT` is used for text fields and timestamps (using `datetime('now')`)
+/// Notes about type differences for MySQL:
+/// - `INT AUTO_INCREMENT` is used for id with PRIMARY KEY
+/// - `VARCHAR` and `TEXT` are used for text fields
+/// - `DATETIME` is used for timestamps with DEFAULT CURRENT_TIMESTAMP
 /// - `options` is stored as JSON text in a `TEXT` column
-pub async fn init_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
-    // Enable foreign key enforcement in SQLite
-    // (Must be set per-connection for older SQLite versions; this is safe to run repeatedly.)
-    sqlx::query("PRAGMA foreign_keys = ON;")
-        .execute(pool)
-        .await?;
-
+pub async fn init_db(pool: &MySqlPool) -> Result<(), sqlx::Error> {
     // Create entries table (source data)
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS entries (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            list_index INTEGER,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            list_index INT,
             kanji TEXT,
             kana TEXT,
             meaning TEXT
-        );
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         "#,
     )
     .execute(pool)
@@ -37,11 +31,11 @@ pub async fn init_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS quizzes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
             description TEXT,
-            created_at TEXT DEFAULT (datetime('now'))
-        );
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         "#,
     )
     .execute(pool)
@@ -51,38 +45,38 @@ pub async fn init_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS n_level (
-            id INTEGER PRIMARY KEY,
-            level TEXT NOT NULL
-        );
+            id INT PRIMARY KEY,
+            level VARCHAR(10) NOT NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         "#,
     )
     .execute(pool)
     .await?;
 
     // Populate canonical n_level rows (id 1..5)
-    // Use INSERT OR IGNORE so this is idempotent.
-    sqlx::query("INSERT OR IGNORE INTO n_level (id, level) VALUES (?, ?)")
-        .bind(1i64)
+    // Use INSERT IGNORE so this is idempotent.
+    sqlx::query("INSERT IGNORE INTO n_level (id, level) VALUES (?, ?)")
+        .bind(1i32)
         .bind("n5")
         .execute(pool)
         .await?;
-    sqlx::query("INSERT OR IGNORE INTO n_level (id, level) VALUES (?, ?)")
-        .bind(2i64)
+    sqlx::query("INSERT IGNORE INTO n_level (id, level) VALUES (?, ?)")
+        .bind(2i32)
         .bind("n4")
         .execute(pool)
         .await?;
-    sqlx::query("INSERT OR IGNORE INTO n_level (id, level) VALUES (?, ?)")
-        .bind(3i64)
+    sqlx::query("INSERT IGNORE INTO n_level (id, level) VALUES (?, ?)")
+        .bind(3i32)
         .bind("n3")
         .execute(pool)
         .await?;
-    sqlx::query("INSERT OR IGNORE INTO n_level (id, level) VALUES (?, ?)")
-        .bind(4i64)
+    sqlx::query("INSERT IGNORE INTO n_level (id, level) VALUES (?, ?)")
+        .bind(4i32)
         .bind("n2")
         .execute(pool)
         .await?;
-    sqlx::query("INSERT OR IGNORE INTO n_level (id, level) VALUES (?, ?)")
-        .bind(5i64)
+    sqlx::query("INSERT IGNORE INTO n_level (id, level) VALUES (?, ?)")
+        .bind(5i32)
         .bind("n1")
         .execute(pool)
         .await?;
@@ -90,22 +84,25 @@ pub async fn init_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     // Create questions table (keeps original columns and extends with level & chapter)
     // - entry_id references entries.id
     // - quiz_id is optional (can be NULL) and references quizzes.id
-    // - options stored as JSON text in TEXT column
+    // - options stored as JSON text in a TEXT column
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS questions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            entry_id INTEGER REFERENCES entries(id) ON DELETE CASCADE,
-            quiz_id INTEGER REFERENCES quizzes(id) ON DELETE SET NULL,
-            q_type TEXT,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            entry_id INT,
+            quiz_id INT,
+            q_type VARCHAR(50),
             prompt TEXT,
             correct_answer TEXT,
             options TEXT,
-            correct_index INTEGER,
-            level INTEGER REFERENCES n_level(id),
-            chapter INTEGER,
-            created_at TEXT DEFAULT (datetime('now'))
-        );
+            correct_index INT,
+            level INT,
+            chapter INT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE,
+            FOREIGN KEY (quiz_id) REFERENCES quizzes(id) ON DELETE SET NULL,
+            FOREIGN KEY (level) REFERENCES n_level(id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         "#,
     )
     .execute(pool)
@@ -115,11 +112,11 @@ pub async fn init_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS tests (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            title VARCHAR(255),
             questions TEXT,
-            created_at TEXT DEFAULT (datetime('now'))
-        );
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         "#,
     )
     .execute(pool)
@@ -132,50 +129,52 @@ pub async fn init_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
 
     // Add missing columns to questions table if they don't exist
     // This handles the case where database was created from SQL file
-    // Note: SQLite doesn't have "ALTER TABLE ADD COLUMN IF NOT EXISTS"
+    // Note: MySQL doesn't have "ALTER TABLE ADD COLUMN IF NOT EXISTS"
     // so we check if column exists first
     
     // Helper function to check if column exists in a table
     // Note: This function is only called with hardcoded table names during initialization,
     // not with user input. Table names are validated via allowlist.
-    async fn column_exists(pool: &SqlitePool, table: &str, column: &str) -> bool {
+    async fn column_exists(pool: &MySqlPool, table: &str, column: &str) -> bool {
         // Validate table name against allowlist to prevent SQL injection
         const ALLOWED_TABLES: &[&str] = &["questions", "entries", "quizzes", "tests", "n_level"];
         if !ALLOWED_TABLES.contains(&table) {
             return false;
         }
         
-        // Safe to use format! here since table name is validated
-        let query = format!("PRAGMA table_info({})", table);
-        if let Ok(rows) = sqlx::query(&query).fetch_all(pool).await {
-            for row in rows {
-                if let Ok(name) = row.try_get::<String, _>("name") {
-                    if name == column {
-                        return true;
-                    }
-                }
-            }
+        // Get the database name from the connection
+        // For MySQL, we query information_schema
+        let query = format!(
+            "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?"
+        );
+        if let Ok(rows) = sqlx::query(&query)
+            .bind(table)
+            .bind(column)
+            .fetch_all(pool)
+            .await 
+        {
+            return !rows.is_empty();
         }
         false
     }
 
     // Add quiz_id column if missing
     if !column_exists(pool, "questions", "quiz_id").await {
-        sqlx::query("ALTER TABLE questions ADD COLUMN quiz_id INTEGER REFERENCES quizzes(id) ON DELETE SET NULL")
+        sqlx::query("ALTER TABLE questions ADD COLUMN quiz_id INT, ADD FOREIGN KEY (quiz_id) REFERENCES quizzes(id) ON DELETE SET NULL")
             .execute(pool)
             .await?;
     }
 
     // Add level column if missing
     if !column_exists(pool, "questions", "level").await {
-        sqlx::query("ALTER TABLE questions ADD COLUMN level INTEGER REFERENCES n_level(id)")
+        sqlx::query("ALTER TABLE questions ADD COLUMN level INT, ADD FOREIGN KEY (level) REFERENCES n_level(id)")
             .execute(pool)
             .await?;
     }
 
     // Add chapter column if missing
     if !column_exists(pool, "questions", "chapter").await {
-        sqlx::query("ALTER TABLE questions ADD COLUMN chapter INTEGER")
+        sqlx::query("ALTER TABLE questions ADD COLUMN chapter INT")
             .execute(pool)
             .await?;
     }

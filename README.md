@@ -1,12 +1,12 @@
 # Japanese Vocabulary Quiz Application
 
-A full-stack quiz application for learning Japanese vocabulary, built with Node.js frontend, Rust backend, and SQLite (file-based) database. Designed for localhost single-user deployment with a Quizzi-style interface. The application uses a local SQLite file `mimikara_n3_question.db` by default.
+A full-stack quiz application for learning Japanese vocabulary, built with Node.js frontend, Rust backend, and MySQL database. Designed for localhost single-user deployment with a Quizzi-style interface.
 
 ## 🏗️ Architecture
 
 - **Frontend**: Node.js with Express (MVC pattern)
 - **Backend**: Rust with Actix-web
-- **Database**: SQLite (file: `mimikara_n3_question.db`)
+- **Database**: MySQL
 - **Design**: Quizzi-style quiz interface
 
 ## ✨ Features
@@ -16,7 +16,7 @@ A full-stack quiz application for learning Japanese vocabulary, built with Node.
 - 📊 Real-time scoring (statistics only, not saved to database)
 - 🎨 Modern, responsive design
 - 🔄 MVC architecture for clean code organization
-- 🚀 Fast Rust backend with SQLite (file-based database)
+- 🚀 Fast Rust backend with MySQL database
 
 ## 📋 Prerequisites
 
@@ -24,7 +24,7 @@ Before you begin, ensure you have the following installed:
 
 - **Node.js** (v16 or higher)
 - **Rust** (latest stable version)
-- **SQLite** (file-based database; no separate server required)
+- **MySQL** (v5.7 or higher, or v8.0+)
 - **Cargo** (comes with Rust)
 
 ## 🚀 Installation & Setup
@@ -48,17 +48,54 @@ Use the automated setup script:
 ./setup.sh
 ```
 
-### 3. Database Initialization
+### 3. Database Setup
 
-The application uses a SQLite database (`mimikara_n3_questions.db`) that contains Japanese vocabulary questions. To initialize the database:
+The application uses a MySQL database (`japanese_vocab`) that contains Japanese vocabulary questions.
+
+#### Step 1: Ensure MySQL is Running
+
+Make sure MySQL server is running on your system:
 
 ```bash
-# Initialize database from the SQL file
-./init_database.sh
+# For macOS (Homebrew):
+brew services start mysql
+
+# For Ubuntu/Debian:
+sudo systemctl start mysql
+
+# For Windows:
+# Start MySQL service from Services app or MySQL Workbench
+```
+
+#### Step 2: Configure Database Connection
+
+Copy the example environment file and update it with your MySQL credentials:
+
+```bash
+cd backend
+cp .env.example .env
+```
+
+Edit `.env` file and update the `DATABASE_URL`:
+
+```env
+DATABASE_URL=mysql://username:password@localhost:3306/japanese_vocab
+PORT=8081
+```
+
+Replace `username` and `password` with your MySQL credentials.
+
+#### Step 3: Initialize Database
+
+Run the initialization script to create and populate the database:
+
+```bash
+# From project root
+./init_database_mysql.sh
 ```
 
 This script will:
-- Create the database file at `backend/data/mimikara_n3_questions.db`
+- Create the `japanese_vocab` database if it doesn't exist
 - Populate it with entries and questions from `mimikara_n3_questions.db.sql`
 - Skip initialization if the database already exists and has data
 
@@ -66,18 +103,18 @@ The database includes:
 - **1760 vocabulary entries** (kanji, kana, meaning)
 - **10232 quiz questions** in various formats (kanji→kana, kana→meaning, etc.)
 
-**Note:** The backend will automatically add required schema columns (quiz_id, level, chapter) on first run if they don't exist.
+**Note:** The backend will automatically create required tables and add schema columns on first run if they don't exist.
 
 ### 4. Manual Database Inspection
 
-If you want to manually inspect or run SQL against the database file, use the `sqlite3` CLI:
+If you want to manually inspect or run SQL against the database, use the `mysql` CLI:
 
 ```bash
-# Open the database file
-sqlite3 backend/data/mimikara_n3_questions.db
+# Connect to the database
+mysql -u username -p japanese_vocab
 
-# Examples inside sqlite3:
-.tables
+# Examples inside MySQL:
+SHOW TABLES;
 SELECT COUNT(*) FROM entries;
 SELECT COUNT(*) FROM questions;
 SELECT * FROM questions LIMIT 5;
@@ -104,16 +141,16 @@ cd backend
 # Copy environment file (if not done already)
 cp .env.example .env
 
-# Edit .env if needed to change the SQLite database location
+# Edit .env if needed to change MySQL connection settings
 # Example:
-# DATABASE_URL=sqlite://mimikara_n3_question.db
+# DATABASE_URL=mysql://root:password@localhost:3306/japanese_vocab
 # PORT=8081
 
 # Build and run
 cargo build --release
 cargo run
 
-# The backend will start and (if needed) create `mimikara_n3_question.db` and initialize tables.
+# The backend will start and connect to MySQL database.
 # Default backend URL: http://localhost:8081
 ```
 
@@ -194,7 +231,7 @@ Japanese_vocab/
 │   │   └── main.rs       # Main application file
 │   └── Cargo.toml        # Rust dependencies
 └── database/             # Database scripts
-    └── (no separate SQL init file — database is initialized automatically by the backend into `mimikara_n3_question.db`)
+    └── init_database_mysql.sh  # MySQL database initialization script
 ```
 
 ## 🔧 Configuration
@@ -209,7 +246,7 @@ PORT=3000
 ### Backend Environment Variables (.env)
 
 ```env
-DATABASE_URL=sqlite://mimikara_n3_question.db
+DATABASE_URL=mysql://root:password@localhost:3306/japanese_vocab
 PORT=8081
 ```
 
@@ -231,11 +268,11 @@ cargo run
 
 ### Database Management
 
-View tables (using sqlite3 after the backend has initialized the DB file):
+View tables (using MySQL client):
 ```bash
-sqlite3 mimikara_n3_question.db
-# then in sqlite3:
-.tables
+mysql -u username -p japanese_vocab
+# then in MySQL:
+SHOW TABLES;
 # or run a query:
 SELECT * FROM quizzes;
 SELECT * FROM questions;
