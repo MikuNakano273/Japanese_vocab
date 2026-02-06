@@ -51,21 +51,7 @@ Use the automated setup script:
 
 The application uses a SQLite database (`mimikara_n3_questions.db`) that contains Japanese vocabulary questions.
 
-#### Step 1: Initialize Database (Optional)
-
-The backend will automatically create and initialize the database file on first run. If you want to pre-populate it from the SQL file, you can use the initialization script:
-
-```bash
-# From project root
-./init_database.sh
-```
-
-This script will:
-- Create the `mimikara_n3_questions.db` file if it doesn't exist
-- Populate it with entries and questions from `mimikara_n3_questions.db.sql`
-- Skip initialization if the database already exists and has data
-
-The database includes:
+The backend will automatically create and initialize the database file on first run. The database file is included in the repository and contains:
 - **1760 vocabulary entries** (kanji, kana, meaning)
 - **10232 quiz questions** in various formats (kanji→kana, kana→meaning, etc.)
 
