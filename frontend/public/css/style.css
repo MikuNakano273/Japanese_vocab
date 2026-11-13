@@ -17,7 +17,7 @@
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     line-height: 1.6;
     color: var(--dark);
     background-color: #f3f4f6;
@@ -26,7 +26,7 @@ body {
 /* Navigation */
 .navbar {
     background-color: white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     position: sticky;
     top: 0;
     z-index: 100;
@@ -102,13 +102,15 @@ h1 {
     background: white;
     border-radius: 0.5rem;
     padding: 1.5rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    transition: transform 0.3s, box-shadow 0.3s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition:
+        transform 0.3s,
+        box-shadow 0.3s;
 }
 
 .quiz-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .quiz-card h3 {
@@ -181,7 +183,7 @@ h1 {
     padding: 4rem 2rem;
     background: white;
     border-radius: 0.5rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .empty-state p {
@@ -194,7 +196,7 @@ h1 {
     background: white;
     padding: 2rem;
     border-radius: 0.5rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .form-group {
@@ -202,13 +204,12 @@ h1 {
 }
 
 .form-group label {
-    display: block;
     margin-bottom: 0.5rem;
     font-weight: 500;
     color: var(--dark);
 }
 
-.form-group input,
+.form-group input:not([type="radio"]):not([type="checkbox"]),
 .form-group textarea,
 .form-group select {
     width: 100%;
@@ -255,7 +256,7 @@ h1 {
     background: white;
     padding: 2rem;
     border-radius: 0.5rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     margin-bottom: 2rem;
     text-align: center;
 }
@@ -272,7 +273,7 @@ h1 {
     background: white;
     padding: 2rem;
     border-radius: 0.5rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     display: none;
 }
 
@@ -356,7 +357,7 @@ h1 {
     background: white;
     padding: 2rem;
     border-radius: 0.5rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     text-align: center;
     margin-bottom: 2rem;
 }
@@ -365,7 +366,11 @@ h1 {
     width: 200px;
     height: 200px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    background: linear-gradient(
+        135deg,
+        var(--primary-color),
+        var(--secondary-color)
+    );
     display: flex;
     align-items: center;
     justify-content: center;
@@ -396,7 +401,7 @@ h1 {
     background: white;
     padding: 1.5rem;
     border-radius: 0.5rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     margin-bottom: 1rem;
     border-left: 4px solid var(--border);
 }
@@ -481,7 +486,6 @@ h1 {
     border-radius: 0.375rem;
     margin-bottom: 1rem;
 }
-
 /* Footer */
 footer {
     background-color: white;
@@ -497,16 +501,57 @@ footer {
         flex-direction: column;
         gap: 1rem;
     }
-    
+
     .quiz-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .form-actions {
         flex-direction: column;
     }
-    
+
     .result-actions {
         flex-direction: column;
     }
+}
+/* ===== Create Test Page Only ===== */
+.create-test-form {
+    background: white;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    max-width: 900px;
+}
+
+.create-test-form .form-group {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+}
+
+.create-test-form .form-group > label {
+    min-width: 240px;
+    margin-bottom: 0;
+}
+
+.create-test-form .radio-right {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+}
+
+.create-test-form .radio-right label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    margin-bottom: 0;
+}
+
+#createTestMessage {
+    margin-top: 1rem;
+}
+.create-test-form {
+    max-width: 1500px;
+    margin: 2rem auto;
 }
